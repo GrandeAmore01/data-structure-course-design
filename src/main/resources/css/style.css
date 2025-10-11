@@ -1,0 +1,234 @@
+/* 数据结构可视化器样式表 */
+
+/* 根节点样式 */
+.root {
+  -fx-font-family: "Microsoft YaHei", "SimSun", sans-serif;
+  -fx-font-size: 12px;
+}
+
+/* 标题样式 */
+.section-title {
+  -fx-font-size: 14px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #2c3e50;
+}
+
+/* 按钮样式 */
+.button {
+  -fx-background-color: #3498db;
+  -fx-text-fill: white;
+  -fx-border-radius: 4px;
+  -fx-background-radius: 4px;
+  -fx-padding: 5px 10px;
+  -fx-font-size: 11px;
+}
+
+.button:hover {
+  -fx-background-color: #2980b9;
+}
+
+.button:pressed {
+  -fx-background-color: #21618c;
+}
+
+/* 主要按钮样式 */
+.button.primary {
+  -fx-background-color: #27ae60;
+}
+
+.button.primary:hover {
+  -fx-background-color: #229954;
+}
+
+/* 危险按钮样式 */
+.button.danger {
+  -fx-background-color: #e74c3c;
+}
+
+.button.danger:hover {
+  -fx-background-color: #c0392b;
+}
+
+/* 文本框样式 */
+.text-field {
+  -fx-border-color: #bdc3c7;
+  -fx-border-radius: 3px;
+  -fx-background-radius: 3px;
+  -fx-padding: 3px 6px;
+}
+
+.text-field:focused {
+  -fx-border-color: #3498db;
+  -fx-border-width: 2px;
+}
+
+/* 文本区域样式 */
+.text-area {
+  -fx-border-color: #bdc3c7;
+  -fx-border-radius: 3px;
+  -fx-background-radius: 3px;
+}
+
+.text-area:focused {
+  -fx-border-color: #3498db;
+  -fx-border-width: 2px;
+}
+
+/* 下拉框样式 */
+.combo-box {
+  -fx-border-color: #bdc3c7;
+  -fx-border-radius: 3px;
+  -fx-background-radius: 3px;
+}
+
+.combo-box:focused {
+  -fx-border-color: #3498db;
+}
+
+/* 标签页样式 */
+.tab-pane {
+  -fx-tab-min-height: 30px;
+}
+
+.tab {
+  -fx-background-color: #ecf0f1;
+  -fx-border-color: #bdc3c7;
+  -fx-padding: 5px 15px;
+}
+
+.tab:selected {
+  -fx-background-color: #3498db;
+  -fx-text-fill: white;
+}
+
+.tab .tab-label {
+  -fx-text-fill: #2c3e50;
+}
+
+.tab:selected .tab-label {
+  -fx-text-fill: white;
+}
+
+/* 分割面板样式 */
+.split-pane {
+  -fx-background-color: #f8f9fa;
+}
+
+.split-pane-divider {
+  -fx-background-color: #bdc3c7;
+  -fx-padding: 1px;
+}
+
+/* 滑块样式 */
+.slider .track {
+  -fx-background-color: #ecf0f1;
+}
+
+.slider .thumb {
+  -fx-background-color: #3498db;
+}
+
+/* 菜单栏样式 */
+.menu-bar {
+  -fx-background-color: #34495e;
+}
+
+.menu-bar .menu-button {
+  -fx-background-color: transparent;
+  -fx-text-fill: white;
+}
+
+.menu-bar .menu-button:hover {
+  -fx-background-color: #2c3e50;
+}
+
+/* 进度条样式 */
+.progress-bar .track {
+  -fx-background-color: #ecf0f1;
+}
+
+.progress-bar .bar {
+  -fx-background-color: #27ae60;
+}
+
+/* 列表视图样式 */
+.list-view {
+  -fx-border-color: #bdc3c7;
+  -fx-border-radius: 3px;
+  -fx-background-radius: 3px;
+}
+
+.list-cell {
+  -fx-background-color: transparent;
+  -fx-padding: 3px 6px;
+}
+
+.list-cell:selected {
+  -fx-background-color: #3498db;
+  -fx-text-fill: white;
+}
+
+/* 表格视图样式 */
+.table-view {
+  -fx-border-color: #bdc3c7;
+  -fx-border-radius: 3px;
+  -fx-background-radius: 3px;
+}
+
+.table-row-cell:selected {
+  -fx-background-color: #3498db;
+  -fx-text-fill: white;
+}
+
+/* 工具提示样式 */
+.tooltip {
+  -fx-background-color: #2c3e50;
+  -fx-text-fill: white;
+  -fx-border-radius: 3px;
+  -fx-background-radius: 3px;
+  -fx-padding: 5px 8px;
+  -fx-font-size: 10px;
+}
+
+/* 可视化画布容器样式 */
+.visualization-container {
+  -fx-background-color: white;
+  -fx-border-color: #bdc3c7;
+  -fx-border-width: 1px;
+  -fx-border-radius: 3px;
+}
+
+/* 控制面板样式 */
+.control-panel {
+  -fx-background-color: #f8f9fa;
+  -fx-padding: 10px;
+  -fx-spacing: 10px;
+}
+
+/* 状态标签样式 */
+.status-label {
+  -fx-background-color: #e8f4fd;
+  -fx-text-fill: #2c3e50;
+  -fx-padding: 5px 10px;
+  -fx-border-radius: 15px;
+  -fx-background-radius: 15px;
+}
+
+/* 错误标签样式 */
+.error-label {
+  -fx-background-color: #fdeaea;
+  -fx-text-fill: #e74c3c;
+  -fx-padding: 5px 10px;
+  -fx-border-radius: 15px;
+  -fx-background-radius: 15px;
+}
+
+/* 成功标签样式 */
+.success-label {
+  -fx-background-color: #eafaf1;
+  -fx-text-fill: #27ae60;
+  -fx-padding: 5px 10px;
+  -fx-border-radius: 15px;
+  -fx-background-radius: 15px;
+}
+

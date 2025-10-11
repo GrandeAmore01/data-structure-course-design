@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.datastruct.visualizer.controller.MainController">
+   <top>
+      <MenuBar BorderPane.alignment="CENTER">
+         <menus>
+            <Menu mnemonicParsing="false" text="文件">
+               <items>
+                  <MenuItem fx:id="saveMenuItem" mnemonicParsing="false" text="保存" />
+                  <MenuItem fx:id="loadMenuItem" mnemonicParsing="false" text="加载" />
+                  <SeparatorMenuItem mnemonicParsing="false" />
+                  <MenuItem mnemonicParsing="false" text="退出" />
+               </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="帮助">
+               <items>
+                  <MenuItem mnemonicParsing="false" text="关于" />
+               </items>
+            </Menu>
+         </menus>
+      </MenuBar>
+   </top>
+   <center>
+      <TabPane fx:id="mainTabPane" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+         <tabs>
+            <Tab fx:id="graphTab" text="图数据结构">
+               <content>
+                  <SplitPane dividerPositions="0.8" orientation="HORIZONTAL">
+                     <items>
+                        <VBox fx:id="graphContainer" style="-fx-background-color: white;">
+                           <padding>
+                              <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                           </padding>
+                        </VBox>
+                        <VBox spacing="10.0">
+                           <children>
+                              <Label styleClass="section-title" text="图控制面板" />
+                              <Separator />
+                              
+                              <!-- 图创建区域 -->
+                              <Label text="创建图:" />
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="类型:" />
+                                    <ComboBox fx:id="graphTypeCombo" prefWidth="100.0" />
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="顶点数:" />
+                                    <TextField fx:id="numVerticesField" prefWidth="80.0" />
+                                    <Button fx:id="createGraphButton" text="创建" />
+                                 </children>
+                              </HBox>
+                              
+                              <Separator />
+                              
+                              <!-- 边操作区域 -->
+                              <Label text="边操作:" />
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="起点:" />
+                                    <TextField fx:id="sourceVertexField" prefWidth="50.0" />
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="终点:" />
+                                    <TextField fx:id="destVertexField" prefWidth="50.0" />
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="权重:" />
+                                    <TextField fx:id="edgeWeightField" prefWidth="50.0" text="1.0" />
+                                 </children>
+                              </HBox>
+                              <HBox spacing="5.0">
+                                 <children>
+                                    <Button fx:id="addEdgeButton" text="添加边" />
+                                    <Button fx:id="removeEdgeButton" text="删除边" />
+                                 </children>
+                              </HBox>
+                              
+                              <Separator />
+                              
+                              <!-- 算法执行区域 -->
+                              <Label text="图算法:" />
+                              <ComboBox fx:id="graphAlgorithmCombo" prefWidth="150.0" />
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="起始顶点:" />
+                                    <TextField fx:id="startVertexField" prefWidth="50.0" />
+                                 </children>
+                              </HBox>
+                              <Button fx:id="runAlgorithmButton" text="运行算法" />
+                              
+                              <Separator />
+                              
+                              <!-- 信息显示区域 -->
+                              <Label text="图信息:" />
+                              <TextArea fx:id="graphInfoArea" editable="false" prefHeight="150.0" wrapText="true" />
+                           </children>
+                           <padding>
+                              <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                           </padding>
+                        </VBox>
+                     </items>
+                  </SplitPane>
+               </content>
+            </Tab>
+            <Tab fx:id="sortingTab" text="排序算法">
+               <content>
+                  <SplitPane dividerPositions="0.8" orientation="HORIZONTAL">
+                     <items>
+                        <VBox fx:id="sortingContainer" style="-fx-background-color: white;">
+                           <padding>
+                              <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                           </padding>
+                        </VBox>
+                        <VBox spacing="10.0">
+                           <children>
+                              <Label styleClass="section-title" text="排序控制面板" />
+                              <Separator />
+                              
+                              <!-- 数组输入区域 -->
+                              <Label text="数组输入:" />
+                              <TextArea fx:id="arrayInputField" prefHeight="60.0" wrapText="true" />
+                              <Button fx:id="setArrayButton" text="设置数组" />
+                              
+                              <Separator />
+                              
+                              <!-- 算法选择区域 -->
+                              <Label text="排序算法:" />
+                              <ComboBox fx:id="sortingAlgorithmCombo" prefWidth="150.0" />
+                              
+                              <!-- 动画控制区域 -->
+                              <Label text="动画控制:" />
+                              <HBox spacing="5.0">
+                                 <children>
+                                    <Button fx:id="startSortingButton" text="开始排序" />
+                                    <Button fx:id="pauseButton" text="暂停" />
+                                    <Button fx:id="resetButton" text="重置" />
+                                 </children>
+                              </HBox>
+                              
+                              <Label text="动画速度:" />
+                              <Slider fx:id="speedSlider" max="2000.0" min="100.0" showTickLabels="true" showTickMarks="true" />
+                              
+                              <Separator />
+                              
+                              <!-- 算法信息区域 -->
+                              <Label text="算法信息:" />
+                              <TextArea fx:id="algorithmInfoArea" editable="false" prefHeight="200.0" wrapText="true" />
+                           </children>
+                           <padding>
+                              <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                           </padding>
+                        </VBox>
+                     </items>
+                  </SplitPane>
+               </content>
+            </Tab>
+         </tabs>
+      </TabPane>
+   </center>
+</BorderPane>
+
