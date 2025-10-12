@@ -48,7 +48,7 @@ public class MainController implements Initializable {
     
     // 排序相关控件
     @FXML private VBox sortingContainer;
-    @FXML private TextField arrayInputField;
+    @FXML private TextArea arrayInputField;//原来是TextField
     @FXML private Button setArrayButton;
     @FXML private ComboBox<String> sortingAlgorithmCombo;
     @FXML private Button startSortingButton;
