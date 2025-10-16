@@ -1,6 +1,7 @@
 module datastructurevisualizer {
     requires javafx.controls;
     requires javafx.fxml;
+    requires transitive javafx.graphics;
     requires com.fasterxml.jackson.databind;
     requires org.slf4j;
     

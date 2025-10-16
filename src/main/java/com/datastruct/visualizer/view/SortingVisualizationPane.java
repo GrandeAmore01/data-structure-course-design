@@ -128,6 +128,25 @@ public class SortingVisualizationPane extends Pane {
         if (currentStep != null) {
             drawStepDescription();
         }
+
+        // 如果 currentStep 包含 temp 信息，绘制悬浮 temp（橙色）
+        if (currentStep != null && currentStep.getTempValue() != null && currentStep.getTempIndex() != null) {
+            int tempIdx = currentStep.getTempIndex();
+            int[] arr = currentStep.getArrayState();
+            if (tempIdx >= 0 && tempIdx < arr.length) {
+                double x = MARGIN + tempIdx * ((CANVAS_WIDTH - 2 * MARGIN) / arr.length);
+                double cx = x + (barWidth - 2) / 2;
+                double cy = CANVAS_HEIGHT - MARGIN - (CANVAS_HEIGHT - 2 * MARGIN - 50) - 30; // 悬浮位置
+                gc.setFill(Color.ORANGE);
+                gc.fillOval(cx - 10, cy, 20, 20);
+                gc.setStroke(Color.BLACK);
+                gc.strokeOval(cx - 10, cy, 20, 20);
+                gc.setFill(Color.BLACK);
+                gc.setFont(Font.font(12));
+                gc.setTextAlign(TextAlignment.CENTER);
+                gc.fillText(String.valueOf(currentStep.getTempValue()), cx, cy + 14);
+            }
+        }
     }
     
     /**
@@ -139,6 +158,8 @@ public class SortingVisualizationPane extends Pane {
         }
         
         switch (currentStep.getType()) {
+            case INITIAL:
+                break;
             case COMPARE:
                 if (index == currentStep.getIndex1() || index == currentStep.getIndex2()) {
                     return compareColor;

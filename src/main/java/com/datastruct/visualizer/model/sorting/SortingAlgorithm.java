@@ -77,6 +77,13 @@ public abstract class SortingAlgorithm {
         );
         steps.add(step);
     }
+
+    /**
+     * 兼容：直接添加已有的 SortingStep（允许带 temp 信息的步骤对象）
+     */
+    protected void addStep(SortingStep step) {
+        steps.add(step);
+    }
     
     /**
      * 交换数组中两个元素
