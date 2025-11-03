@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.net.URL;
@@ -43,6 +44,7 @@ public class MainController implements Initializable {
     @FXML private Button removeEdgeButton;
     @FXML private ComboBox<String> graphAlgorithmCombo;
     @FXML private TextField startVertexField;
+    @FXML private TextField targetVertexField;
     @FXML private Button runAlgorithmButton;
     @FXML private TextArea graphInfoArea;
     
@@ -100,7 +102,7 @@ public class MainController implements Initializable {
         graphTypeCombo.getItems().addAll("邻接矩阵", "邻接表");
         graphTypeCombo.setValue("邻接矩阵");
         
-        graphAlgorithmCombo.getItems().addAll("深度优先搜索", "广度优先搜索", "最小生成树");
+        graphAlgorithmCombo.getItems().addAll("深度优先搜索", "广度优先搜索", "最短路径生成");
         graphAlgorithmCombo.setValue("深度优先搜索");
         
         sortingAlgorithmCombo.getItems().addAll("直接插入排序", "简单选择排序", "快速排序");
@@ -239,9 +241,53 @@ public class MainController implements Initializable {
                     result = currentGraph.breadthFirstSearch(startVertex);
                     animateTraversal(result, "BFS");
                     break;
-                case "最小生成树":
-                    // TODO: 实现最小生成树算法
-                    showAlert("信息", "最小生成树算法待实现");
+                case "最短路径生成":
+                    try {
+                        // 读取目标顶点（新 UI 字段 targetVertexField）
+                        String rawTarget = targetVertexField == null ? "" : targetVertexField.getText();
+                        String targetText = rawTarget == null ? "" : rawTarget.trim();
+                        if (targetText.isEmpty()) {
+                            showAlert("错误", "请在目标顶点输入框中输入目标顶点索引（整数）");
+                            return;
+                        }
+
+                        int targetVertex = Integer.parseInt(targetText);
+                        if (targetVertex < 0 || targetVertex >= currentGraph.getNumVertices()) {
+                            showAlert("错误", "目标顶点索引超出范围");
+                            return;
+                        }
+
+                        // 检查是否存在负权边，若存在使用 Bellman-Ford，否则使用 Dijkstra
+                        boolean hasNegative = currentGraph.getAllEdges().stream().anyMatch(e -> e.getWeight() < 0);
+
+                        if (hasNegative) {
+                            MST.ShortestPathResult res = MST.bellmanFord(currentGraph, startVertex);
+                            if (res.hasNegativeCycle()) {
+                                showAlert("错误", "检测到负权回路，最短路径不可确定");
+                                return;
+                            }
+
+                            List<Integer> path = res.getPath(targetVertex);
+                            if (path.isEmpty()) {
+                                showAlert("信息", "从 " + startVertex + " 到 " + targetVertex + " 不可达");
+                                return;
+                            }
+
+                            animatePath(path, "Bellman-Ford", res.getDistances()[targetVertex]);
+                        } else {
+                            // Dijkstra
+                            MST.ShortestPathResult res = MST.dijkstra(currentGraph, startVertex);
+                            List<Integer> path = res.getPath(targetVertex);
+                            if (path.isEmpty()) {
+                                showAlert("信息", "从 " + startVertex + " 到 " + targetVertex + " 不可达");
+                                return;
+                            }
+
+                            animatePath(path, "Dijkstra", res.getDistances()[targetVertex]);
+                        }
+                    } catch (NumberFormatException e) {
+                        showAlert("错误", "请输入有效的目标顶点索引");
+                    }
                     break;
             }
             
@@ -266,6 +312,49 @@ public class MainController implements Initializable {
             timeline.getKeyFrames().add(keyFrame);
         }
         
+        timeline.play();
+    }
+
+    /**
+     * 可视化显示一条最短路径：按顺序高亮顶点与对应的边，并在信息区显示算法名称和总距离
+     */
+    private void animatePath(List<Integer> vertices, String algorithmName, double totalDistance) {
+        if (vertices == null || vertices.isEmpty()) return;
+
+        graphVisualizationPane.clearHighlights();
+
+        Timeline timeline = new Timeline();
+
+        double stepMillis = 1000; // 固定步长，若需要可改为 speedSlider.getValue()
+
+        for (int i = 0; i < vertices.size(); i++) {
+            final int idx = i;
+            KeyFrame keyFrame = new KeyFrame(
+                Duration.millis(idx * stepMillis),
+                e -> {
+                    int v = vertices.get(idx);
+                    graphVisualizationPane.highlightVertex(v);
+
+                    // 高亮前一条边（如果存在）
+                    if (idx > 0) {
+                        int u = vertices.get(idx - 1);
+                        double w = currentGraph.getWeight(u, v);
+                        Edge edge = new Edge(u, v, w);
+                        graphVisualizationPane.highlightEdge(edge);
+                    }
+
+                    updateGraphInfo(algorithmName + " 最短路径: " + vertices.toString() + "，总距离=" + String.format("%.2f", totalDistance));
+                }
+            );
+            timeline.getKeyFrames().add(keyFrame);
+        }
+
+        // 临时切换高亮颜色为黄色，动画结束后恢复原色
+        Color old = graphVisualizationPane.getHighlightColor();
+        graphVisualizationPane.setHighlightColor(Color.YELLOW);
+
+        timeline.setOnFinished(e -> graphVisualizationPane.setHighlightColor(old));
+
         timeline.play();
     }
     

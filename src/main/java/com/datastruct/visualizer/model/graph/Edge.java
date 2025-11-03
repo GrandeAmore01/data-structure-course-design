@@ -1,5 +1,7 @@
 package com.datastruct.visualizer.model.graph;
 
+import java.util.Objects;
+
 /**
  * 图的边类
  * Edge class for graph data structure
@@ -44,7 +46,7 @@ public class Edge {
     
     @Override
     public int hashCode() {
-        return source * 31 + destination;
+        return Objects.hash(source, destination, weight);
     }
     
     @Override

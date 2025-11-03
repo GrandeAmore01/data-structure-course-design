@@ -290,6 +290,22 @@ public class GraphVisualizationPane extends Pane {
         highlightedEdges.clear();
         redraw();
     }
+
+    /**
+     * 获取当前高亮颜色（用于在控制器中临时替换并恢复）
+     */
+    public Color getHighlightColor() {
+        return highlightColor;
+    }
+
+    /**
+     * 设置高亮颜色并重绘。
+     */
+    public void setHighlightColor(Color color) {
+        if (color == null) return;
+        this.highlightColor = color;
+        redraw();
+    }
     
     /**
      * 顶点位置内部类

@@ -95,6 +95,8 @@
                                  <children>
                                     <Label text="起始顶点:" />
                                     <TextField fx:id="startVertexField" prefWidth="50.0" />
+                                    <Label text="目标顶点:" />
+                                    <TextField fx:id="targetVertexField" prefWidth="50.0" />
                                  </children>
                               </HBox>
                               <Button fx:id="runAlgorithmButton" text="运行算法" />

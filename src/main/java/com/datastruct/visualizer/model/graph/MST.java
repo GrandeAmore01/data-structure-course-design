@@ -2,6 +2,7 @@ package com.datastruct.visualizer.model.graph;
 
 import java.util.*;
 
+
 /**
  * 最小生成树算法实现
  * Minimum Spanning Tree Algorithms
@@ -46,6 +47,183 @@ public class MST {
         }
         
         return mstEdges;
+    }
+
+    /* ------------------ 最短路径算法 ------------------ */
+
+    /**
+     * 最短路径结果封装
+     */
+    public static class ShortestPathResult {
+        private final double[] distances;
+        private final int[] predecessors;
+        private final boolean hasNegativeCycle;
+
+        public ShortestPathResult(double[] distances, int[] predecessors, boolean hasNegativeCycle) {
+            this.distances = distances;
+            this.predecessors = predecessors;
+            this.hasNegativeCycle = hasNegativeCycle;
+        }
+
+        public double[] getDistances() {
+            return distances.clone();
+        }
+
+        public int[] getPredecessors() {
+            return predecessors.clone();
+        }
+
+        public boolean hasNegativeCycle() {
+            return hasNegativeCycle;
+        }
+
+        /**
+         * 重建从 source 到 target 的路径（若不可达返回空列表；若存在负权回路则抛出异常）
+         */
+        public List<Integer> getPath(int target) {
+            if (hasNegativeCycle) {
+                throw new IllegalStateException("图包含负权回路，路径不可确定");
+            }
+            if (target < 0 || target >= predecessors.length) return Collections.emptyList();
+            if (Double.isInfinite(distances[target])) return Collections.emptyList();
+
+            LinkedList<Integer> path = new LinkedList<>();
+            int cur = target;
+            while (cur != -1) {
+                path.addFirst(cur);
+                cur = predecessors[cur];
+            }
+            return path;
+        }
+    }
+
+    /**
+     * Dijkstra 算法（用于非负权图）
+     * @param graph 图（支持有向图）
+     * @param source 源点
+     * @return ShortestPathResult，包含距离数组与前驱数组
+     */
+    public static ShortestPathResult dijkstra(Graph graph, int source) {
+        int n = graph.getNumVertices();
+        double[] dist = new double[n];
+        int[] prev = new int[n];
+        Arrays.fill(dist, Double.POSITIVE_INFINITY);
+        Arrays.fill(prev, -1);
+
+        if (source < 0 || source >= n) {
+            throw new IllegalArgumentException("源点索引越界");
+        }
+
+        dist[source] = 0.0;
+
+        PriorityQueue<Integer> pq = new PriorityQueue<>(Comparator.comparingDouble(v -> dist[v]));
+        pq.offer(source);
+
+        while (!pq.isEmpty()) {
+            int u = pq.poll();
+            // 如果弹出的节点的当前距离已经不是最新的，则跳过
+            //（Comparator 会基于 dist 数组排序，这里用简单的跳过策略）
+            for (int v : graph.getNeighbors(u)) {
+                double weight = graph.getWeight(u, v);
+                double alt = dist[u] + weight;
+                if (alt < dist[v]) {
+                    dist[v] = alt;
+                    prev[v] = u;
+                    pq.offer(v);
+                }
+            }
+        }
+
+        return new ShortestPathResult(dist, prev, false);
+    }
+
+    /**
+     * Bellman-Ford 算法：支持负权边，并能检测负权回路
+     * @param graph 图（支持有向图）
+     * @param source 源点
+     * @return ShortestPathResult，如果检测到负权回路则 hasNegativeCycle 为 true
+     */
+    public static ShortestPathResult bellmanFord(Graph graph, int source) {
+        int n = graph.getNumVertices();
+        double[] dist = new double[n];
+        int[] prev = new int[n];
+        Arrays.fill(dist, Double.POSITIVE_INFINITY);
+        Arrays.fill(prev, -1);
+
+        if (source < 0 || source >= n) {
+            throw new IllegalArgumentException("源点索引越界");
+        }
+
+        dist[source] = 0.0;
+        List<Edge> edges = graph.getAllEdges();
+
+        // 松弛 n-1 次
+        for (int i = 0; i < n - 1; i++) {
+            boolean updated = false;
+            for (Edge e : edges) {
+                int u = e.getSource();
+                int v = e.getDestination();
+                double w = e.getWeight();
+                if (!Double.isInfinite(dist[u]) && dist[u] + w < dist[v]) {
+                    dist[v] = dist[u] + w;
+                    prev[v] = u;
+                    updated = true;
+                }
+            }
+            if (!updated) break;
+        }
+
+        // 检测负权回路
+        boolean hasNegCycle = false;
+        for (Edge e : edges) {
+            int u = e.getSource();
+            int v = e.getDestination();
+            double w = e.getWeight();
+            if (!Double.isInfinite(dist[u]) && dist[u] + w < dist[v]) {
+                hasNegCycle = true;
+                break;
+            }
+        }
+
+        return new ShortestPathResult(dist, prev, hasNegCycle);
+    }
+
+    /**
+     * 便捷 API：使用 Dijkstra 得到 source -> target 的最短路径（若不可达返回空列表）
+     */
+    public static List<Integer> shortestPathDijkstra(Graph graph, int source, int target) {
+        ShortestPathResult res = dijkstra(graph, source);
+        return res.getPath(target);
+    }
+
+    /**
+     * 便捷 API：使用 Dijkstra 得到 source -> target 的最短距离（不可达返回 Double.POSITIVE_INFINITY）
+     */
+    public static double shortestDistanceDijkstra(Graph graph, int source, int target) {
+        ShortestPathResult res = dijkstra(graph, source);
+        double[] d = res.getDistances();
+        if (target < 0 || target >= d.length) throw new IllegalArgumentException("目标顶点索引越界");
+        return d[target];
+    }
+
+    /**
+     * 便捷 API：使用 Bellman-Ford 得到 source -> target 的最短路径（若存在负权回路则抛出异常）
+     */
+    public static List<Integer> shortestPathBellmanFord(Graph graph, int source, int target) {
+        ShortestPathResult res = bellmanFord(graph, source);
+        if (res.hasNegativeCycle()) throw new IllegalStateException("图包含负权回路，路径不可确定");
+        return res.getPath(target);
+    }
+
+    /**
+     * 便捷 API：使用 Bellman-Ford 得到 source -> target 的最短距离
+     */
+    public static double shortestDistanceBellmanFord(Graph graph, int source, int target) {
+        ShortestPathResult res = bellmanFord(graph, source);
+        if (res.hasNegativeCycle()) throw new IllegalStateException("图包含负权回路，距离不可确定");
+        double[] d = res.getDistances();
+        if (target < 0 || target >= d.length) throw new IllegalArgumentException("目标顶点索引越界");
+        return d[target];
     }
     
     /**
@@ -156,5 +334,6 @@ public class MST {
             return find(x) == find(y);
         }
     }
+    
 }
 
