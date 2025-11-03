@@ -15,6 +15,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.scene.paint.Color;
+// no extra imports
 
 import java.io.File;
 import java.net.URL;
@@ -35,6 +36,7 @@ public class MainController implements Initializable {
     // 图相关控件
     @FXML private VBox graphContainer;
     @FXML private ComboBox<String> graphTypeCombo;
+    @FXML private CheckBox directedCheckBox;
     @FXML private TextField numVerticesField;
     @FXML private Button createGraphButton;
     @FXML private TextField sourceVertexField;
@@ -78,6 +80,9 @@ public class MainController implements Initializable {
     private boolean isAnimationRunning = false;
     
     private Stage stage;
+
+    // 点击交互：记录上一次被选中的顶点索引（用于点击两次建立/删除边）
+    private int lastSelectedVertex = -1;
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -97,6 +102,18 @@ public class MainController implements Initializable {
         // 添加到容器
         graphContainer.getChildren().add(graphVisualizationPane);
         sortingContainer.getChildren().add(sortingVisualizationPane);
+
+        // 注册图面板的顶点点击回调：用于点击交互添加/删除边
+        graphVisualizationPane.setOnVertexClickedHandler(v -> {
+            // 如果当前未创建图，提示并返回
+            if (currentGraph == null) {
+                showAlert("信息", "请先创建图（通过左侧创建面板）");
+                return;
+            }
+            // 仅在图标签页启用交互
+            if (mainTabPane.getSelectionModel().getSelectedItem() != graphTab) return;
+            handleVertexClick(v);
+        });
         
         // 初始化下拉框
         graphTypeCombo.getItems().addAll("邻接矩阵", "邻接表");
@@ -147,7 +164,7 @@ public class MainController implements Initializable {
             }
             
             String graphType = graphTypeCombo.getValue();
-            boolean isDirected = true; // 可以添加选择框让用户选择
+            boolean isDirected = directedCheckBox == null ? true : directedCheckBox.isSelected();
             
             if ("邻接矩阵".equals(graphType)) {
                 currentGraph = new AdjacencyMatrix(numVertices, isDirected);
@@ -157,6 +174,8 @@ public class MainController implements Initializable {
             
             graphVisualizationPane.setGraph(currentGraph);
             updateGraphInfo();
+            // 重置点击交互状态
+            lastSelectedVertex = -1;
             
         } catch (NumberFormatException e) {
             showAlert("错误", "请输入有效的顶点数量");
@@ -541,6 +560,9 @@ public class MainController implements Initializable {
                     // 更新UI
                     numVerticesField.setText(String.valueOf(currentGraph.getNumVertices()));
                     graphTypeCombo.setValue(currentGraph instanceof AdjacencyMatrix ? "邻接矩阵" : "邻接表");
+                    if (directedCheckBox != null) {
+                        directedCheckBox.setSelected(currentGraph.isDirected());
+                    }
                     
                     // 切换到图标签页
                     mainTabPane.getSelectionModel().select(graphTab);
@@ -548,6 +570,7 @@ public class MainController implements Initializable {
                     // 更新可视化
                     graphVisualizationPane.setGraph(currentGraph);
                     updateGraphInfo();
+                    lastSelectedVertex = -1;
                     
                     showAlert("成功", "图数据已加载: " + file.getName());
                     
@@ -643,5 +666,62 @@ public class MainController implements Initializable {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * 处理图面板上的顶点点击交互：
+     * - 第一次点击选中顶点（高亮）
+     * - 第二次点击与第一次不同顶点时，尝试在两顶点之间添加或删除一条边（根据当前是否存在边来切换）
+     */
+    private void handleVertexClick(Integer vertex) {
+        if (currentGraph == null) return;
+
+        // 如果尚未选中任何顶点，则选中当前顶点
+        if (lastSelectedVertex == -1) {
+            lastSelectedVertex = vertex;
+            graphVisualizationPane.clearHighlights();
+            graphVisualizationPane.highlightVertex(vertex);
+            updateGraphInfo("已选中顶点: " + vertex + "，请点击另一个顶点以添加/删除边");
+            return;
+        }
+
+        // 再次点击同一顶点 -> 取消选择
+        if (lastSelectedVertex == vertex) {
+            lastSelectedVertex = -1;
+            graphVisualizationPane.clearHighlights();
+            updateGraphInfo();
+            return;
+        }
+
+        // 两次点击不同顶点：切换边（存在则删除，否则添加）
+        int u = lastSelectedVertex;
+        int v = vertex;
+
+        try {
+            double weight = 1.0;
+            try {
+                String wtxt = edgeWeightField.getText();
+                if (wtxt != null && !wtxt.trim().isEmpty()) {
+                    weight = Double.parseDouble(wtxt.trim());
+                }
+            } catch (NumberFormatException ignored) {
+                // 使用默认权重 1.0
+            }
+
+            if (currentGraph.hasEdge(u, v)) {
+                currentGraph.removeEdge(u, v);
+                updateGraphInfo("已删除边: " + u + " -> " + v);
+            } else {
+                currentGraph.addEdge(u, v, weight);
+                updateGraphInfo("已添加边: " + u + " -> " + v + " (权重=" + weight + ")");
+            }
+
+            graphVisualizationPane.clearHighlights();
+            graphVisualizationPane.redraw();
+        } catch (IllegalArgumentException ex) {
+            showAlert("错误", "操作失败: " + ex.getMessage());
+        } finally {
+            lastSelectedVertex = -1;
+        }
     }
 }

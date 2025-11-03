@@ -51,6 +51,11 @@
                               </HBox>
                               <HBox alignment="CENTER_LEFT" spacing="5.0">
                                  <children>
+                                    <CheckBox fx:id="directedCheckBox" text="有向图" selected="true" />
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
                                     <Label text="顶点数:" />
                                     <TextField fx:id="numVerticesField" prefWidth="80.0" />
                                     <Button fx:id="createGraphButton" text="创建" />

@@ -2,6 +2,7 @@ package com.datastruct.visualizer.view;
 
 import com.datastruct.visualizer.model.graph.Edge;
 import com.datastruct.visualizer.model.graph.Graph;
+import java.util.function.Consumer;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseEvent;
@@ -39,6 +40,8 @@ public class GraphVisualizationPane extends Pane {
     // 高亮状态
     private Set<Integer> highlightedVertices;
     private Set<Edge> highlightedEdges;
+    // 顶点点击回调（如果设置，点击顶点时会调用）
+    private Consumer<Integer> vertexClickHandler;
     
     public GraphVisualizationPane() {
         this.canvas = new Canvas(CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -236,10 +239,23 @@ public class GraphVisualizationPane extends Pane {
             double distance = Math.sqrt(Math.pow(x - pos.x, 2) + Math.pow(y - pos.y, 2));
             
             if (distance <= VERTEX_RADIUS) {
+                // 优先调用注册的处理器
+                if (vertexClickHandler != null) {
+                    vertexClickHandler.accept(entry.getKey());
+                }
+
+                // 仍然保留对默认行为的回调钩子
                 onVertexClicked(entry.getKey());
                 break;
             }
         }
+    }
+
+    /**
+     * 注册顶点点击处理回调（可为 null 表示移除）
+     */
+    public void setOnVertexClickedHandler(Consumer<Integer> handler) {
+        this.vertexClickHandler = handler;
     }
     
     /**
