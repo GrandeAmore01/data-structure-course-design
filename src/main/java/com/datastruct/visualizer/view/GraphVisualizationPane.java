@@ -35,11 +35,17 @@ public class GraphVisualizationPane extends Pane {
     private Color vertexColor = Color.LIGHTBLUE;
     private Color edgeColor = Color.BLACK;
     private Color highlightColor = Color.RED;
+    // 最小生成树（MST）可视化使用的颜色
+    private Color consideredEdgeColor = Color.ORANGE; // 被考虑的边
+    private Color acceptedEdgeColor = Color.LIMEGREEN; // 被接受的边
     private Color textColor = Color.BLACK;
     
     // 高亮状态
     private Set<Integer> highlightedVertices;
     private Set<Edge> highlightedEdges;
+    // 专门用于表示算法过程中的边状态（使用端点键避免对象实例/浮点比较问题）
+    private Set<String> consideredEdges;
+    private Set<String> acceptedEdges;
     // 顶点点击回调（如果设置，点击顶点时会调用）
     private Consumer<Integer> vertexClickHandler;
     
@@ -49,6 +55,8 @@ public class GraphVisualizationPane extends Pane {
         this.vertexPositions = new HashMap<>();
         this.highlightedVertices = new HashSet<>();
         this.highlightedEdges = new HashSet<>();
+    this.consideredEdges = new HashSet<>();
+    this.acceptedEdges = new HashSet<>();
         
         setupCanvas();
         getChildren().add(canvas);
@@ -124,7 +132,12 @@ public class GraphVisualizationPane extends Pane {
             if (sourcePos == null || destPos == null) continue;
             
             // 设置边的颜色
-            if (highlightedEdges.contains(edge)) {
+            String key = edgeKey(edge);
+            if (acceptedEdges.contains(key)) {
+                gc.setStroke(acceptedEdgeColor);
+            } else if (consideredEdges.contains(key)) {
+                gc.setStroke(consideredEdgeColor);
+            } else if (highlightedEdges.contains(edge)) {
                 gc.setStroke(highlightColor);
             } else {
                 gc.setStroke(edgeColor);
@@ -297,6 +310,38 @@ public class GraphVisualizationPane extends Pane {
         highlightedEdges.remove(edge);
         redraw();
     }
+
+    /**
+     * 标记为正在被考虑（短暂高亮）
+     */
+    public void highlightConsideredEdge(Edge edge) {
+        if (edge == null) return;
+        consideredEdges.add(edgeKey(edge));
+        redraw();
+    }
+
+    public void unhighlightConsideredEdge(Edge edge) {
+        if (edge == null) return;
+        consideredEdges.remove(edgeKey(edge));
+        redraw();
+    }
+
+    /**
+     * 将边标记为已接受（MST的一部分），会持续高亮
+     */
+    public void acceptEdge(Edge edge) {
+        if (edge == null) return;
+        acceptedEdges.add(edgeKey(edge));
+        // 也从 considered 中移除（如果存在）
+        consideredEdges.remove(edgeKey(edge));
+        redraw();
+    }
+
+    public void unacceptEdge(Edge edge) {
+        if (edge == null) return;
+        acceptedEdges.remove(edgeKey(edge));
+        redraw();
+    }
     
     /**
      * 清除所有高亮
@@ -304,7 +349,21 @@ public class GraphVisualizationPane extends Pane {
     public void clearHighlights() {
         highlightedVertices.clear();
         highlightedEdges.clear();
+        consideredEdges.clear();
+        acceptedEdges.clear();
         redraw();
+    }
+
+    // 辅助：生成边的唯一键（无向图保持顺序一致）
+    private String edgeKey(Edge e) {
+        if (e == null) return "";
+        int a = e.getSource();
+        int b = e.getDestination();
+        // 对于无向图，保证较小索引在前以便统一键名
+        if (!graph.isDirected() && a > b) {
+            int tmp = a; a = b; b = tmp;
+        }
+        return a + "#" + b;
     }
 
     /**

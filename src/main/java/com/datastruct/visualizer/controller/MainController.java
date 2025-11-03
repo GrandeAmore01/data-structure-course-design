@@ -19,8 +19,7 @@ import javafx.scene.paint.Color;
 
 import java.io.File;
 import java.net.URL;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.util.*;
 
 /**
  * 主控制器类
@@ -119,7 +118,7 @@ public class MainController implements Initializable {
         graphTypeCombo.getItems().addAll("邻接矩阵", "邻接表");
         graphTypeCombo.setValue("邻接矩阵");
         
-        graphAlgorithmCombo.getItems().addAll("深度优先搜索", "广度优先搜索", "最短路径生成");
+    graphAlgorithmCombo.getItems().addAll("深度优先搜索", "广度优先搜索", "最短路径生成", "最小生成树(Kruskal)");
         graphAlgorithmCombo.setValue("深度优先搜索");
         
         sortingAlgorithmCombo.getItems().addAll("直接插入排序", "简单选择排序", "快速排序");
@@ -308,6 +307,13 @@ public class MainController implements Initializable {
                         showAlert("错误", "请输入有效的目标顶点索引");
                     }
                     break;
+                case "最小生成树(Kruskal)":
+                    if (currentGraph.isDirected()) {
+                        showAlert("错误", "最小生成树仅适用于无向图");
+                        return;
+                    }
+                    animateKruskal();
+                    break;
             }
             
         } catch (NumberFormatException e) {
@@ -373,6 +379,104 @@ public class MainController implements Initializable {
         graphVisualizationPane.setHighlightColor(Color.YELLOW);
 
         timeline.setOnFinished(e -> graphVisualizationPane.setHighlightColor(old));
+
+        timeline.play();
+    }
+
+    // MST 可视化：项目保留 Kruskal 实现
+
+    /**
+     * Kruskal 可视化：按权重排序所有边，依次考虑每条边并展示是否被加入 MST
+     */
+    private void animateKruskal() {
+        class EdgeAction {
+            Edge edge;
+            boolean accepted;
+            EdgeAction(Edge edge, boolean accepted) { this.edge = edge; this.accepted = accepted; }
+        }
+
+        List<EdgeAction> actions = new ArrayList<>();
+
+        // 取所有边并按权重排序
+        List<Edge> allEdges = new ArrayList<>(currentGraph.getAllEdges());
+        allEdges.sort(Comparator.comparingDouble(Edge::getWeight));
+
+        // 本地并查集实现
+        class UF {
+            private int[] parent;
+            public UF(int n) { parent = new int[n]; for (int i = 0; i < n; i++) parent[i] = i; }
+            public int find(int x) { return parent[x]==x?x:(parent[x]=find(parent[x])); }
+            public boolean union(int a, int b) {
+                int ra = find(a), rb = find(b);
+                if (ra == rb) return false;
+                parent[ra] = rb; return true;
+            }
+        }
+
+        UF uf = new UF(currentGraph.getNumVertices());
+        List<Edge> mst = new ArrayList<>();
+
+        for (int j = 0; j < allEdges.size(); j++) {
+            Edge e = allEdges.get(j);
+            int u = e.getSource();
+            int v = e.getDestination();
+
+            // 记录为被考虑
+            actions.add(new EdgeAction(e, false));
+            // 快照为剩余边（j+1 到末尾）
+
+            // 若两端不连通，则接受
+            if (uf.union(u, v)) {
+                // union 返回 true 表示连接成功（即接受边）
+                actions.add(new EdgeAction(e, true));
+                mst.add(e);
+                // 接受后快照（相比考虑后仍相同）
+                if (mst.size() == currentGraph.getNumVertices() - 1) break;
+            } else {
+                // 被拒绝（已连通） -> 前面的 false step 已表示考虑
+            }
+        }
+
+        // 动画播放
+        graphVisualizationPane.clearHighlights();
+        double stepMillis = 800;
+        Timeline timeline = new Timeline();
+
+        // 记录最终被接受为 MST 的边（在算法构建阶段已经收集到 mst 列表）
+        List<Edge> acceptedDuring = new ArrayList<>();
+
+        for (int i = 0; i < actions.size(); i++) {
+            EdgeAction act = actions.get(i);
+            final int idx = i;
+            KeyFrame kf = new KeyFrame(Duration.millis(idx * stepMillis), e -> {
+                if (!act.accepted) {
+                    // 被考虑的边：短暂高亮为橙色，半步后取消（仅用于可视化“被考虑”）
+                    graphVisualizationPane.highlightConsideredEdge(act.edge);
+                } else {
+                    // 被接受的边（加入 MST）：保持橙色（标记为 acceptedDuring），等待算法结束统一变为绿色
+                    graphVisualizationPane.highlightConsideredEdge(act.edge);
+                    if (!acceptedDuring.contains(act.edge)) acceptedDuring.add(act.edge);
+                    updateGraphInfo("Kruskal: 添加边 " + act.edge.getSource() + " - " + act.edge.getDestination() + " (w=" + act.edge.getWeight() + ")");
+                }
+            });
+            timeline.getKeyFrames().add(kf);
+
+            // 如果是未被接受的考虑边，安排在半步时间后取消高亮
+            if (!act.accepted) {
+                KeyFrame un = new KeyFrame(Duration.millis(idx * stepMillis + stepMillis / 2), e -> {
+                    graphVisualizationPane.unhighlightConsideredEdge(act.edge);
+                });
+                timeline.getKeyFrames().add(un);
+            }
+        }
+
+        // 动画结束后：把所有被接受的边变为绿色（accepted），并显示最终 MST 权重
+        timeline.setOnFinished(e -> {
+            for (Edge ae : acceptedDuring) {
+                graphVisualizationPane.acceptEdge(ae);
+            }
+            updateGraphInfo("Kruskal 完成，MST 权重=" + String.format("%.2f", MST.calculateMSTWeight(mst)));
+        });
 
         timeline.play();
     }
@@ -667,6 +771,9 @@ public class MainController implements Initializable {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    // (已移除) snapshotOfPQ 方法：侧边栏已被移除，不再需要该快照函数
+
 
     /**
      * 处理图面板上的顶点点击交互：

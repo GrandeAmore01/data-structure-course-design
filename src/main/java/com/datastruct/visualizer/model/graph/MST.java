@@ -227,7 +227,7 @@ public class MST {
     }
     
     /**
-     * Prim算法求最小生成树
+     * 求最小生成树（基于优先队列的实现）
      * @param graph 图
      * @param startVertex 起始顶点
      * @return 最小生成树的边集合
@@ -250,7 +250,7 @@ public class MST {
         // 添加从起始顶点出发的所有边
         addEdgesFromVertex(graph, startVertex, visited, pq);
         
-        // Prim算法主循环
+    // 主循环：从优先队列中选择最小边并扩展
         while (!pq.isEmpty() && mstEdges.size() < graph.getNumVertices() - 1) {
             Edge edge = pq.poll();
             int dest = edge.getDestination();
