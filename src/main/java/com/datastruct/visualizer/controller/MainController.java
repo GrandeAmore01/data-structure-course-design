@@ -14,7 +14,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.scene.paint.Color;
 // no extra imports
 
 import java.io.File;
@@ -346,11 +345,14 @@ public class MainController implements Initializable {
     private void animatePath(List<Integer> vertices, String algorithmName, double totalDistance) {
         if (vertices == null || vertices.isEmpty()) return;
 
+        // 清除已有高亮
         graphVisualizationPane.clearHighlights();
 
         Timeline timeline = new Timeline();
-
         double stepMillis = 1000; // 固定步长，若需要可改为 speedSlider.getValue()
+
+        // 记录路径上的边，动画期间将它们标记为"被考虑"(橘色)
+        List<Edge> pathEdges = new ArrayList<>();
 
         for (int i = 0; i < vertices.size(); i++) {
             final int idx = i;
@@ -360,12 +362,13 @@ public class MainController implements Initializable {
                     int v = vertices.get(idx);
                     graphVisualizationPane.highlightVertex(v);
 
-                    // 高亮前一条边（如果存在）
+                    // 高亮前一条边（如果存在）：标记为被考虑（橙色），并保留直到算法结束
                     if (idx > 0) {
                         int u = vertices.get(idx - 1);
                         double w = currentGraph.getWeight(u, v);
                         Edge edge = new Edge(u, v, w);
-                        graphVisualizationPane.highlightEdge(edge);
+                        if (!pathEdges.contains(edge)) pathEdges.add(edge);
+                        graphVisualizationPane.highlightConsideredEdge(edge);
                     }
 
                     updateGraphInfo(algorithmName + " 最短路径: " + vertices.toString() + "，总距离=" + String.format("%.2f", totalDistance));
@@ -374,12 +377,19 @@ public class MainController implements Initializable {
             timeline.getKeyFrames().add(keyFrame);
         }
 
-        // 临时切换高亮颜色为黄色，动画结束后恢复原色
-        Color old = graphVisualizationPane.getHighlightColor();
-        graphVisualizationPane.setHighlightColor(Color.YELLOW);
+        // 在最后一条边变为橙色后，停顿一段时间再把路径上的所有边统一变为红色
+        double pauseMillis = 800; // 在最后一条边橙色显示后的停顿时长（毫秒）
+        double convertTime = (vertices.size() - 1) * stepMillis + pauseMillis;
 
-        timeline.setOnFinished(e -> graphVisualizationPane.setHighlightColor(old));
+        // 在最后一条边变为橙色后，停顿一段时间并保持橙色（不转换为红色）
+        KeyFrame pauseKF = new KeyFrame(Duration.millis(convertTime), ev -> {
+            // 保持当前 considered (橙色) 状态，不做转换，供用户观察
+            updateGraphInfo(algorithmName + " 最短路径（已完成，保持橙色显示）: " + vertices.toString() + "，总距离=" + String.format("%.2f", totalDistance));
+        });
 
+        timeline.getKeyFrames().add(pauseKF);
+
+        // 不做额外的 onFinished 转换，直接播放并保持橙色
         timeline.play();
     }
 

@@ -354,6 +354,44 @@ public class GraphVisualizationPane extends Pane {
         redraw();
     }
 
+    /**
+     * 将路径上的临时被考虑的边（橙色）转换为最终高亮（使用内部 graph 中的 Edge 实例以保证 equals/hash 一致）
+     * 这样可以避免因为不同 Edge 实例导致的不匹配问题。
+     */
+    public void finalizePathEdges(List<Edge> edges) {
+        if (edges == null || graph == null) return;
+
+        for (Edge e : edges) {
+            // 移除临时 considered 标记
+            consideredEdges.remove(edgeKey(e));
+
+            // 在当前图中寻找对应的 Edge 实例（优先使用图内的实例以保证绘制匹配）
+            Edge matched = null;
+            for (Edge ge : graph.getAllEdges()) {
+                int a = ge.getSource();
+                int b = ge.getDestination();
+                int ea = e.getSource();
+                int eb = e.getDestination();
+
+                if (graph.isDirected()) {
+                    if (a == ea && b == eb) { matched = ge; break; }
+                } else {
+                    // 无向图，允许端点顺序互换匹配
+                    if ((a == ea && b == eb) || (a == eb && b == ea)) { matched = ge; break; }
+                }
+            }
+
+            if (matched != null) {
+                highlightedEdges.add(matched);
+            } else {
+                // 回退：使用传入的实例（尽管可能导致 equals/hash 不同）
+                highlightedEdges.add(e);
+            }
+        }
+
+        redraw();
+    }
+
     // 辅助：生成边的唯一键（无向图保持顺序一致）
     private String edgeKey(Edge e) {
         if (e == null) return "";
