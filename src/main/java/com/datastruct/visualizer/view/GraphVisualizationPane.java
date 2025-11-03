@@ -46,6 +46,8 @@ public class GraphVisualizationPane extends Pane {
     // 专门用于表示算法过程中的边状态（使用端点键避免对象实例/浮点比较问题）
     private Set<String> consideredEdges;
     private Set<String> acceptedEdges;
+    // 在 Kruskal 动画中：已被接受但尚未在结尾转换为绿色的边（应保持橙色）
+    private Set<String> pendingAcceptedEdges;
     // 顶点点击回调（如果设置，点击顶点时会调用）
     private Consumer<Integer> vertexClickHandler;
     
@@ -57,6 +59,7 @@ public class GraphVisualizationPane extends Pane {
         this.highlightedEdges = new HashSet<>();
     this.consideredEdges = new HashSet<>();
     this.acceptedEdges = new HashSet<>();
+    this.pendingAcceptedEdges = new HashSet<>();
         
         setupCanvas();
         getChildren().add(canvas);
@@ -322,7 +325,11 @@ public class GraphVisualizationPane extends Pane {
 
     public void unhighlightConsideredEdge(Edge edge) {
         if (edge == null) return;
-        consideredEdges.remove(edgeKey(edge));
+        // 如果此边已被标记为 pendingAccepted，则不应被取消橙色显示
+        String key = edgeKey(edge);
+        if (pendingAcceptedEdges.contains(key)) return;
+
+        consideredEdges.remove(key);
         redraw();
     }
 
@@ -331,15 +338,21 @@ public class GraphVisualizationPane extends Pane {
      */
     public void acceptEdge(Edge edge) {
         if (edge == null) return;
-        acceptedEdges.add(edgeKey(edge));
+        String key = edgeKey(edge);
+        // 移除任何 pending 标记（如果存在），并将边标记为最终 accepted
+        pendingAcceptedEdges.remove(key);
+        acceptedEdges.add(key);
         // 也从 considered 中移除（如果存在）
-        consideredEdges.remove(edgeKey(edge));
+        consideredEdges.remove(key);
         redraw();
     }
 
     public void unacceptEdge(Edge edge) {
         if (edge == null) return;
-        acceptedEdges.remove(edgeKey(edge));
+        String key = edgeKey(edge);
+        acceptedEdges.remove(key);
+        // 同时移除可能的 pending 标记
+        pendingAcceptedEdges.remove(key);
         redraw();
     }
     
@@ -351,6 +364,19 @@ public class GraphVisualizationPane extends Pane {
         highlightedEdges.clear();
         consideredEdges.clear();
         acceptedEdges.clear();
+        pendingAcceptedEdges.clear();
+        redraw();
+    }
+
+    /**
+     * 在 Kruskal 动画中标记某条边为已被接受但尚未转换为绿色（应保持橙色显示）
+     */
+    public void markPendingAcceptedEdge(Edge edge) {
+        if (edge == null) return;
+        String key = edgeKey(edge);
+        // 将其放入 considered（橙色）集合，同时标记为 pending，这样后续的 unhighlight 操作不会移除它
+        consideredEdges.add(key);
+        pendingAcceptedEdges.add(key);
         redraw();
     }
 

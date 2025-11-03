@@ -463,8 +463,8 @@ public class MainController implements Initializable {
                     // 被考虑的边：短暂高亮为橙色，半步后取消（仅用于可视化“被考虑”）
                     graphVisualizationPane.highlightConsideredEdge(act.edge);
                 } else {
-                    // 被接受的边（加入 MST）：保持橙色（标记为 acceptedDuring），等待算法结束统一变为绿色
-                    graphVisualizationPane.highlightConsideredEdge(act.edge);
+                    // 被接受的边（加入 MST）：标记为 pending accepted（保持橙色直到最终转换为绿色）
+                    graphVisualizationPane.markPendingAcceptedEdge(act.edge);
                     if (!acceptedDuring.contains(act.edge)) acceptedDuring.add(act.edge);
                     updateGraphInfo("Kruskal: 添加边 " + act.edge.getSource() + " - " + act.edge.getDestination() + " (w=" + act.edge.getWeight() + ")");
                 }
