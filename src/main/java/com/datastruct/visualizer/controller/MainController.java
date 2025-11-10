@@ -76,6 +76,9 @@ public class MainController implements Initializable {
     // 动画控制
     private Timeline sortingAnimation;
     private boolean isAnimationRunning = false;
+    // 图算法动画控制
+    private Timeline graphAnimation;
+    private boolean isGraphAnimationRunning = false;
     
     private Stage stage;
 
@@ -292,15 +295,17 @@ public class MainController implements Initializable {
 
                             animatePath(path, "Bellman-Ford", res.getDistances()[targetVertex]);
                         } else {
-                            // Dijkstra
-                            MST.ShortestPathResult res = MST.dijkstra(currentGraph, startVertex);
-                            List<Integer> path = res.getPath(targetVertex);
-                            if (path.isEmpty()) {
+                            // Dijkstra（使用带步骤的实现以便可视化生成过程）
+                            MST.DijkstraResultWithSteps res = MST.dijkstraWithSteps(currentGraph, startVertex, targetVertex);
+                            // 如果不可达，提示并返回
+                            double distToTarget = res.getDistances()[targetVertex];
+                            if (Double.isInfinite(distToTarget)) {
                                 showAlert("信息", "从 " + startVertex + " 到 " + targetVertex + " 不可达");
                                 return;
                             }
 
-                            animatePath(path, "Dijkstra", res.getDistances()[targetVertex]);
+                            // 播放生成过程动画（不会在结束时把边变红，保持橙色）
+                            animateShortestPathGeneration(res, startVertex, targetVertex, "Dijkstra");
                         }
                     } catch (NumberFormatException e) {
                         showAlert("错误", "请输入有效的目标顶点索引");
@@ -322,12 +327,18 @@ public class MainController implements Initializable {
     
     private void animateTraversal(List<Integer> vertices, String algorithmName) {
         graphVisualizationPane.clearHighlights();
-        
+
+        // 停止之前的图动画（如果存在）
+        if (graphAnimation != null) {
+            graphAnimation.stop();
+        }
+
         Timeline timeline = new Timeline();
+        double stepMillis = Math.max(200, speedSlider.getValue());
         for (int i = 0; i < vertices.size(); i++) {
             final int vertex = vertices.get(i);
             KeyFrame keyFrame = new KeyFrame(
-                Duration.millis(i * 1000),
+                Duration.millis(i * stepMillis),
                 e -> {
                     graphVisualizationPane.highlightVertex(vertex);
                     updateGraphInfo(algorithmName + " 遍历: 访问顶点 " + vertex);
@@ -335,7 +346,11 @@ public class MainController implements Initializable {
             );
             timeline.getKeyFrames().add(keyFrame);
         }
-        
+
+        // 绑定为当前图动画并启动
+        graphAnimation = timeline;
+        isGraphAnimationRunning = true;
+        pauseButton.setText("暂停");
         timeline.play();
     }
 
@@ -348,8 +363,11 @@ public class MainController implements Initializable {
         // 清除已有高亮
         graphVisualizationPane.clearHighlights();
 
-        Timeline timeline = new Timeline();
-        double stepMillis = 1000; // 固定步长，若需要可改为 speedSlider.getValue()
+    // 停止任何正在运行的图动画
+    if (graphAnimation != null) graphAnimation.stop();
+
+    Timeline timeline = new Timeline();
+    double stepMillis = Math.max(200, speedSlider.getValue()); // 固定步长，受 speedSlider 控制
 
         // 记录路径上的边，动画期间将它们标记为"被考虑"(橘色)
         List<Edge> pathEdges = new ArrayList<>();
@@ -389,7 +407,176 @@ public class MainController implements Initializable {
 
         timeline.getKeyFrames().add(pauseKF);
 
-        // 不做额外的 onFinished 转换，直接播放并保持橙色
+        // 绑定为当前图动画并启动（以便 pause/stop 控制）
+        graphAnimation = timeline;
+        isGraphAnimationRunning = true;
+        pauseButton.setText("暂停");
+        timeline.play();
+    }
+
+    /**
+     * 可视化 Dijkstra 的生成过程（带步骤）。
+     * 视觉规则：
+     * - 每当算法考虑一条边时（CONSIDER_EDGE）短暂变为橙色；
+     * - 当松弛（RELAX_EDGE）发生时，更新前驱数组并把从源到目标的当前最短路径（若存在）标记为橙色；
+     * - 顶点最终确定时高亮顶点；
+     * - 算法结束后，保留路径边的橙色（不变为红色）。
+     */
+    private void animateShortestPathGeneration(MST.DijkstraResultWithSteps res, int source, int target, String algorithmName) {
+        if (res == null) return;
+
+        List<MST.DijkstraStep> steps = res.getSteps();
+        if (steps == null || steps.isEmpty()) return;
+
+    graphVisualizationPane.clearHighlights();
+
+    // 停止之前的图动画
+    if (graphAnimation != null) graphAnimation.stop();
+
+    double stepMillis = Math.max(200, speedSlider.getValue());
+    Timeline timeline = new Timeline();
+
+        int n = currentGraph.getNumVertices();
+        int[] prev = new int[n];
+        Arrays.fill(prev, -1);
+
+        List<Edge> currentPathEdges = new ArrayList<>();
+
+        for (int i = 0; i < steps.size(); i++) {
+            final int idx = i;
+            MST.DijkstraStep step = steps.get(i);
+            double t = idx * stepMillis;
+
+            switch (step.getType()) {
+                case EXTRACT_MIN:
+                case FINALIZE_VERTEX: {
+                    final int v = step.getVertex();
+                    KeyFrame kf = new KeyFrame(Duration.millis(t), e -> {
+                        graphVisualizationPane.highlightVertex(v);
+                        updateGraphInfo(algorithmName + " 处理中: 定点 " + v + " 确定最短距离");
+                    });
+                    timeline.getKeyFrames().add(kf);
+                    break;
+                }
+                case CONSIDER_EDGE: {
+                    final Edge e = step.getEdge();
+                    KeyFrame kf = new KeyFrame(Duration.millis(t), ev -> {
+                        graphVisualizationPane.highlightConsideredEdge(e);
+                        updateGraphInfo(algorithmName + " 处理中: 考虑边 " + e.getSource() + "->" + e.getDestination());
+                    });
+                    timeline.getKeyFrames().add(kf);
+
+                    // 半步后取消临时考虑高亮（如果该边没有被 later relax 成为当前路径的一部分，会保持）
+                    KeyFrame un = new KeyFrame(Duration.millis(t + stepMillis / 2), ev -> {
+                        graphVisualizationPane.unhighlightConsideredEdge(e);
+                    });
+                    timeline.getKeyFrames().add(un);
+                    break;
+                }
+                case RELAX_EDGE: {
+                    final Edge e = step.getEdge();
+                    final double newDist = step.getNewDistance();
+                    KeyFrame kf = new KeyFrame(Duration.millis(t), ev -> {
+                        // 更新前驱数组
+                        int u = e.getSource();
+                        int v = e.getDestination();
+                        prev[v] = u;
+
+                        // 计算从 source 到 target 的当前路径（若存在），并把该路径上的边标为橙色
+                        List<Edge> newPathEdges = new ArrayList<>();
+                        if (target >= 0 && target < prev.length) {
+                            LinkedList<Integer> path = new LinkedList<>();
+                            int cur = target;
+                            while (cur != -1 && cur != source && cur < prev.length) {
+                                path.addFirst(cur);
+                                cur = prev[cur];
+                                if (cur == -1) break;
+                            }
+                            if (cur == source) {
+                                path.addFirst(source);
+                                // build edges from path
+                                for (int pi = 1; pi < path.size(); pi++) {
+                                    int a = path.get(pi - 1);
+                                    int b = path.get(pi);
+                                    double w = currentGraph.getWeight(a, b);
+                                    newPathEdges.add(new Edge(a, b, w));
+                                }
+                            }
+                        }
+
+                        // 更新高亮：移除旧的 path edges 中不在 newPath 的，添加 newPath 中新增的
+                        for (Edge oldE : new ArrayList<>(currentPathEdges)) {
+                            boolean found = false;
+                            for (Edge ne : newPathEdges) {
+                                if ((oldE.getSource() == ne.getSource() && oldE.getDestination() == ne.getDestination()) ||
+                                    (!currentGraph.isDirected() && oldE.getSource() == ne.getDestination() && oldE.getDestination() == ne.getSource())) {
+                                    found = true; break;
+                                }
+                            }
+                            if (!found) {
+                                graphVisualizationPane.unhighlightConsideredEdge(oldE);
+                                currentPathEdges.remove(oldE);
+                            }
+                        }
+
+                        for (Edge ne : newPathEdges) {
+                            boolean already = false;
+                            for (Edge ce : currentPathEdges) {
+                                if ((ce.getSource() == ne.getSource() && ce.getDestination() == ne.getDestination()) ||
+                                    (!currentGraph.isDirected() && ce.getSource() == ne.getDestination() && ce.getDestination() == ne.getSource())) {
+                                    already = true; break;
+                                }
+                            }
+                            if (!already) {
+                                graphVisualizationPane.highlightConsideredEdge(ne);
+                                currentPathEdges.add(ne);
+                            }
+                        }
+                        // 把之前可能的候选红色路径保留不变，只有在 PATH_TO_TARGET_FOUND 步骤时更新
+
+                        updateGraphInfo(algorithmName + " 处理中: 松弛边 " + e.getSource() + "->" + e.getDestination() + "，当前到目标距离=" + String.format("%.2f", newDist));
+                    });
+                    timeline.getKeyFrames().add(kf);
+                    break;
+                }
+                    case PATH_TO_TARGET_FOUND: {
+                        final List<Edge> pathEdges = step.getPathEdges();
+                        KeyFrame kf = new KeyFrame(Duration.millis(t), ev -> {
+                            // 清除上一次候选红色路径并标记新的候选路径为红色
+                            graphVisualizationPane.markCandidatePathEdges(pathEdges);
+                            updateGraphInfo(algorithmName + " 处理中: 发现可达目标的候选路径（红色）: " + (pathEdges == null ? "[]" : pathEdges.toString()));
+                        });
+                        timeline.getKeyFrames().add(kf);
+                        break;
+                    }
+                case COMPLETE: {
+                    KeyFrame kf = new KeyFrame(Duration.millis(t), ev -> {
+                        updateGraphInfo(algorithmName + " 完成，稍后将最终路径标为绿色");
+                    });
+                    timeline.getKeyFrames().add(kf);
+
+                    // 在完成后一小段时间，将当前路径边标记为 accepted (绿色)
+                    KeyFrame finalizeKF = new KeyFrame(Duration.millis(t + stepMillis), ev -> {
+                        // 使用 acceptEdge 将这些边变为绿色（并从 considered 中移除）
+                        for (Edge finalE : new ArrayList<>(currentPathEdges)) {
+                            graphVisualizationPane.acceptEdge(finalE);
+                        }
+                        updateGraphInfo(algorithmName + " 完成，最终最短路径已显示为绿色");
+                        // 完成后，标记动画已停止
+                        isGraphAnimationRunning = false;
+                        pauseButton.setText("暂停");
+                    });
+                    timeline.getKeyFrames().add(finalizeKF);
+
+                    break;
+                }
+            }
+        }
+
+        // 绑定为当前图动画并启动
+        graphAnimation = timeline;
+        isGraphAnimationRunning = true;
+        pauseButton.setText("暂停");
         timeline.play();
     }
 
@@ -447,10 +634,13 @@ public class MainController implements Initializable {
             }
         }
 
-        // 动画播放
-        graphVisualizationPane.clearHighlights();
-        double stepMillis = 800;
-        Timeline timeline = new Timeline();
+    // 动画播放
+    graphVisualizationPane.clearHighlights();
+    // 使用 speedSlider 控制图动画速度
+    double stepMillis = Math.max(200, speedSlider.getValue());
+    // 停止之前的图动画
+    if (graphAnimation != null) graphAnimation.stop();
+    Timeline timeline = new Timeline();
 
         // 记录最终被接受为 MST 的边（在算法构建阶段已经收集到 mst 列表）
         List<Edge> acceptedDuring = new ArrayList<>();
@@ -486,8 +676,14 @@ public class MainController implements Initializable {
                 graphVisualizationPane.acceptEdge(ae);
             }
             updateGraphInfo("Kruskal 完成，MST 权重=" + String.format("%.2f", MST.calculateMSTWeight(mst)));
+            isGraphAnimationRunning = false;
+            pauseButton.setText("暂停");
         });
 
+        // 绑定为当前图动画并启动
+        graphAnimation = timeline;
+        isGraphAnimationRunning = true;
+        pauseButton.setText("暂停");
         timeline.play();
     }
     
@@ -581,6 +777,24 @@ public class MainController implements Initializable {
     
     @FXML
     private void pauseSorting() {
+        // 如果当前在图标签页，则控制图动画的暂停/继续
+        Tab selected = mainTabPane.getSelectionModel().getSelectedItem();
+        if (selected == graphTab) {
+            if (graphAnimation != null) {
+                if (isGraphAnimationRunning) {
+                    graphAnimation.pause();
+                    pauseButton.setText("继续");
+                    isGraphAnimationRunning = false;
+                } else {
+                    graphAnimation.play();
+                    pauseButton.setText("暂停");
+                    isGraphAnimationRunning = true;
+                }
+            }
+            return;
+        }
+
+        // 否则控制排序动画
         if (sortingAnimation != null) {
             if (isAnimationRunning) {
                 sortingAnimation.pause();
@@ -596,6 +810,18 @@ public class MainController implements Initializable {
     
     @FXML
     private void resetSorting() {
+        // 如果当前在图标签页，重置图动画与高亮
+        Tab selected = mainTabPane.getSelectionModel().getSelectedItem();
+        if (selected == graphTab) {
+            if (graphAnimation != null) graphAnimation.stop();
+            isGraphAnimationRunning = false;
+            pauseButton.setText("暂停");
+            // 清除图高亮
+            if (graphVisualizationPane != null) graphVisualizationPane.clearHighlights();
+            return;
+        }
+
+        // 否则重置排序动画
         if (sortingAnimation != null) {
             sortingAnimation.stop();
         }
@@ -603,7 +829,7 @@ public class MainController implements Initializable {
         isAnimationRunning = false;
         startSortingButton.setText("开始排序");
         pauseButton.setText("暂停");
-        
+
         // 重置可视化
         String input = arrayInputField.getText().trim();
         if (!input.isEmpty()) {

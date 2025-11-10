@@ -101,7 +101,7 @@ public class MST {
      * Dijkstra 算法（用于非负权图）
      * @param graph 图（支持有向图）
      * @param source 源点
-     * @return ShortestPathResult，包含距离数组与前驱数组
+    * @return ShortestPathResult，包含距离数组与前驱数组
      */
     public static ShortestPathResult dijkstra(Graph graph, int source) {
         int n = graph.getNumVertices();
@@ -135,6 +135,145 @@ public class MST {
         }
 
         return new ShortestPathResult(dist, prev, false);
+    }
+
+    /**
+     * Dijkstra 带步骤记录的实现，用于可视化算法执行过程。
+     * 返回包含每一步（考虑边 / 松弛边 / 顶点确定 / 完成）的结果。
+     */
+    public static class DijkstraStep {
+        public enum StepType { EXTRACT_MIN, CONSIDER_EDGE, RELAX_EDGE, FINALIZE_VERTEX, PATH_TO_TARGET_FOUND, COMPLETE }
+
+        private StepType type;
+        private Edge edge; // 用于 CONSIDER_EDGE 或 RELAX_EDGE
+        private int vertex; // 用于 EXTRACT_MIN / FINALIZE_VERTEX
+        private double newDistance; // 用于 RELAX_EDGE
+        private List<Edge> pathEdges; // 用于 PATH_TO_TARGET_FOUND
+
+        public DijkstraStep(StepType type) {
+            this.type = type;
+        }
+
+        public DijkstraStep(StepType type, Edge edge) {
+            this.type = type;
+            this.edge = edge;
+        }
+
+        public DijkstraStep(StepType type, int vertex) {
+            this.type = type;
+            this.vertex = vertex;
+        }
+
+        public DijkstraStep(StepType type, Edge edge, double newDistance) {
+            this.type = type;
+            this.edge = edge;
+            this.newDistance = newDistance;
+        }
+
+        public DijkstraStep(StepType type, List<Edge> pathEdges) {
+            this.type = type;
+            this.pathEdges = pathEdges == null ? null : new ArrayList<>(pathEdges);
+        }
+
+        public StepType getType() { return type; }
+        public Edge getEdge() { return edge; }
+        public int getVertex() { return vertex; }
+        public double getNewDistance() { return newDistance; }
+        public List<Edge> getPathEdges() { return pathEdges == null ? null : new ArrayList<>(pathEdges); }
+    }
+
+    public static class DijkstraResultWithSteps {
+        private final double[] distances;
+        private final int[] predecessors;
+        private final List<DijkstraStep> steps;
+
+        public DijkstraResultWithSteps(double[] distances, int[] predecessors, List<DijkstraStep> steps) {
+            this.distances = distances.clone();
+            this.predecessors = predecessors.clone();
+            this.steps = new ArrayList<>(steps);
+        }
+
+        public double[] getDistances() { return distances.clone(); }
+        public int[] getPredecessors() { return predecessors.clone(); }
+        public List<DijkstraStep> getSteps() { return new ArrayList<>(steps); }
+    }
+
+    /**
+     * 带步骤的 Dijkstra 实现
+     */
+    public static DijkstraResultWithSteps dijkstraWithSteps(Graph graph, int source, int target) {
+        int n = graph.getNumVertices();
+        double[] dist = new double[n];
+        int[] prev = new int[n];
+        Arrays.fill(dist, Double.POSITIVE_INFINITY);
+        Arrays.fill(prev, -1);
+
+        List<DijkstraStep> steps = new ArrayList<>();
+
+        if (source < 0 || source >= n) {
+            throw new IllegalArgumentException("源点索引越界");
+        }
+
+        dist[source] = 0.0;
+
+        // 自定义优先队列：存顶点，Comparator 基于当前 dist
+        PriorityQueue<Integer> pq = new PriorityQueue<>(Comparator.comparingDouble(v -> dist[v]));
+        pq.offer(source);
+
+        double bestTargetDist = Double.POSITIVE_INFINITY; // 用于记录目前找到的到目标点的最好距离（若有）
+
+        while (!pq.isEmpty()) {
+            int u = pq.poll();
+
+            // 记录弹出（确定最短距离）
+            steps.add(new DijkstraStep(DijkstraStep.StepType.EXTRACT_MIN, u));
+            steps.add(new DijkstraStep(DijkstraStep.StepType.FINALIZE_VERTEX, u));
+
+            for (int v : graph.getNeighbors(u)) {
+                double w = graph.getWeight(u, v);
+                Edge e = new Edge(u, v, w);
+
+                // 记录考虑这条边
+                steps.add(new DijkstraStep(DijkstraStep.StepType.CONSIDER_EDGE, e));
+
+                double alt = dist[u] + w;
+                if (alt < dist[v]) {
+                    dist[v] = alt;
+                    prev[v] = u;
+                    pq.offer(v);
+                    // 记录松弛操作
+                    steps.add(new DijkstraStep(DijkstraStep.StepType.RELAX_EDGE, e, alt));
+
+                    // 如果这次松弛导致目标的距离被更新（或首次可达），则记录一条 PATH_TO_TARGET_FOUND 步骤
+                    if (target >= 0 && target < n && !Double.isInfinite(dist[target]) && dist[target] < bestTargetDist) {
+                        // 重建从 source 到 target 的路径（基于当前 prev）
+                        LinkedList<Integer> path = new LinkedList<>();
+                        int cur = target;
+                        while (cur != -1) {
+                            path.addFirst(cur);
+                            cur = prev[cur];
+                        }
+
+                        List<Edge> pathEdges = new ArrayList<>();
+                        if (path.size() >= 2) {
+                            for (int i = 1; i < path.size(); i++) {
+                                int a = path.get(i - 1);
+                                int b = path.get(i);
+                                double weight = graph.getWeight(a, b);
+                                pathEdges.add(new Edge(a, b, weight));
+                            }
+                        }
+
+                        steps.add(new DijkstraStep(DijkstraStep.StepType.PATH_TO_TARGET_FOUND, pathEdges));
+                        bestTargetDist = dist[target];
+                    }
+                }
+            }
+        }
+
+        steps.add(new DijkstraStep(DijkstraStep.StepType.COMPLETE));
+
+        return new DijkstraResultWithSteps(dist, prev, steps);
     }
 
     /**

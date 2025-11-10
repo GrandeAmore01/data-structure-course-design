@@ -46,6 +46,10 @@ public class GraphVisualizationPane extends Pane {
     // 专门用于表示算法过程中的边状态（使用端点键避免对象实例/浮点比较问题）
     private Set<String> consideredEdges;
     private Set<String> acceptedEdges;
+    // 候选路径（在算法执行过程中发现的可达目标的当前最短候选路径）——这些边将以 highlightColor (红色) 显示
+    private Set<Edge> candidateHighlightedEdges;
+    // 候选路径的键集合（用于绘制时优先级判断）
+    private Set<String> candidateEdgeKeys;
     // 在 Kruskal 动画中：已被接受但尚未在结尾转换为绿色的边（应保持橙色）
     private Set<String> pendingAcceptedEdges;
     // 顶点点击回调（如果设置，点击顶点时会调用）
@@ -60,6 +64,8 @@ public class GraphVisualizationPane extends Pane {
     this.consideredEdges = new HashSet<>();
     this.acceptedEdges = new HashSet<>();
     this.pendingAcceptedEdges = new HashSet<>();
+    this.candidateHighlightedEdges = new HashSet<>();
+    this.candidateEdgeKeys = new HashSet<>();
         
         setupCanvas();
         getChildren().add(canvas);
@@ -138,6 +144,9 @@ public class GraphVisualizationPane extends Pane {
             String key = edgeKey(edge);
             if (acceptedEdges.contains(key)) {
                 gc.setStroke(acceptedEdgeColor);
+            } else if (candidateEdgeKeys.contains(key)) {
+                // 候选路径优先于被考虑的橙色显示，显示为红色
+                gc.setStroke(highlightColor);
             } else if (consideredEdges.contains(key)) {
                 gc.setStroke(consideredEdgeColor);
             } else if (highlightedEdges.contains(edge)) {
@@ -315,6 +324,65 @@ public class GraphVisualizationPane extends Pane {
     }
 
     /**
+     * 将一组边标记为“候选到目标路径”（红色），并清除之前的候选路径高亮。
+     */
+    public void markCandidatePathEdges(List<Edge> edges) {
+        if (graph == null) return;
+
+        // 清除之前的候选高亮
+        clearCandidatePathEdges();
+
+        if (edges == null || edges.isEmpty()) return;
+
+        for (Edge e : edges) {
+            // 在当前图中寻找对应的 Edge 实例以保证绘制一致
+            Edge matched = null;
+            for (Edge ge : graph.getAllEdges()) {
+                int a = ge.getSource();
+                int b = ge.getDestination();
+                int ea = e.getSource();
+                int eb = e.getDestination();
+
+                if (graph.isDirected()) {
+                    if (a == ea && b == eb) { matched = ge; break; }
+                } else {
+                    if ((a == ea && b == eb) || (a == eb && b == ea)) { matched = ge; break; }
+                }
+            }
+
+            if (matched != null) {
+                String k = edgeKey(matched);
+                // 从 considered 中移除，保证候选路径显示为红色（优先于橙色）
+                consideredEdges.remove(k);
+                highlightedEdges.add(matched);
+                candidateHighlightedEdges.add(matched);
+                candidateEdgeKeys.add(k);
+            } else {
+                String k = edgeKey(e);
+                consideredEdges.remove(k);
+                highlightedEdges.add(e);
+                candidateHighlightedEdges.add(e);
+                candidateEdgeKeys.add(k);
+            }
+        }
+
+        redraw();
+    }
+
+    /**
+     * 清除候选路径（红色）高亮，仅清除由 markCandidatePathEdges 添加的那部分。
+     */
+    public void clearCandidatePathEdges() {
+        if (candidateHighlightedEdges == null || candidateHighlightedEdges.isEmpty()) return;
+        for (Edge e : new ArrayList<>(candidateHighlightedEdges)) {
+            highlightedEdges.remove(e);
+        }
+        candidateHighlightedEdges.clear();
+        candidateEdgeKeys.clear();
+        redraw();
+    }
+
+    /**
      * 标记为正在被考虑（短暂高亮）
      */
     public void highlightConsideredEdge(Edge edge) {
@@ -328,6 +396,8 @@ public class GraphVisualizationPane extends Pane {
         // 如果此边已被标记为 pendingAccepted，则不应被取消橙色显示
         String key = edgeKey(edge);
         if (pendingAcceptedEdges.contains(key)) return;
+        // 如果此边属于候选路径，则不要从 considered 中移除（候选路径以红色优先显示，并由候选集合管理）
+        if (candidateEdgeKeys.contains(key)) return;
 
         consideredEdges.remove(key);
         redraw();
@@ -344,6 +414,12 @@ public class GraphVisualizationPane extends Pane {
         acceptedEdges.add(key);
         // 也从 considered 中移除（如果存在）
         consideredEdges.remove(key);
+        // 如果之前是候选路径（红色），把候选记录移除
+        candidateEdgeKeys.remove(key);
+        // 同时从 candidateHighlightedEdges 中移除对应实例
+        if (candidateHighlightedEdges != null && !candidateHighlightedEdges.isEmpty()) {
+            candidateHighlightedEdges.removeIf(e -> edgeKey(e).equals(key));
+        }
         redraw();
     }
 
@@ -365,6 +441,8 @@ public class GraphVisualizationPane extends Pane {
         consideredEdges.clear();
         acceptedEdges.clear();
         pendingAcceptedEdges.clear();
+        if (candidateHighlightedEdges != null) candidateHighlightedEdges.clear();
+        if (candidateEdgeKeys != null) candidateEdgeKeys.clear();
         redraw();
     }
 

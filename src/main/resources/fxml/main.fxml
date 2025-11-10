@@ -105,6 +105,12 @@
                                  </children>
                               </HBox>
                               <Button fx:id="runAlgorithmButton" text="运行算法" />
+                              <HBox spacing="5.0">
+                                 <children>
+                                    <Button text="暂停/继续" onAction="#pauseSorting" />
+                                    <Button text="重置" onAction="#resetSorting" />
+                                 </children>
+                              </HBox>
                               
                               <Separator />
                               
