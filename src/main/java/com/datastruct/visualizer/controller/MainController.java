@@ -57,7 +57,11 @@ public class MainController implements Initializable {
     @FXML private Button pauseButton;
     @FXML private Button resetButton;
     @FXML private Slider speedSlider;
+    @FXML private Label speedMillisLabel;
     @FXML private TextArea algorithmInfoArea;
+    // 图面板的速度控件（与全局 speedSlider 绑定）
+    @FXML private Slider graphSpeedSlider;
+    @FXML private Label graphSpeedMillisLabel;
     
     // 文件操作控件
     @FXML private MenuItem saveMenuItem;
@@ -89,6 +93,31 @@ public class MainController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         setupUI();
         setupEventHandlers();
+    }
+
+    /**
+     * 将 speedSlider 的值映射为动画步长（毫秒），使用“右快左慢”映射：
+     * - slider 在最右端 -> 返回较小的毫秒（更快）
+     * - slider 在最左端 -> 返回较大的毫秒（更慢）
+     * 映射使用一个合理的区间（minMillis..maxMillis），并保证返回值为正。
+     */
+    private double sliderToMillis() {
+        if (speedSlider == null) return 500.0;
+        double sMin = speedSlider.getMin();
+        double sMax = speedSlider.getMax();
+        double val = speedSlider.getValue();
+
+        // 定义目标毫秒区间（最小为最快，最大为最慢）
+        double minMillis = 50.0;   // 最快（右端）
+        double maxMillis = 2000.0; // 最慢（左端）
+
+        if (sMax <= sMin) return 500.0;
+
+        double norm = (val - sMin) / (sMax - sMin); // 0..1 (left..right)
+        double inverted = 1.0 - norm; // 1..0 (left..right)
+
+        double millis = minMillis + inverted * (maxMillis - minMillis);
+        return Math.max(10.0, millis);
     }
     
     public void setStage(Stage stage) {
@@ -131,6 +160,30 @@ public class MainController implements Initializable {
         arrayInputField.setText("64, 34, 25, 12, 22, 11, 90");
         startVertexField.setText("0");
         speedSlider.setValue(500); // 默认动画速度
+        // 初始化速度显示（毫秒）并监听滑块变化以更新显示
+        if (speedMillisLabel != null) {
+            speedMillisLabel.setText(String.format("%.0f ms", sliderToMillis()));
+        }
+        if (speedSlider != null) {
+            speedSlider.valueProperty().addListener((obs, oldV, newV) -> {
+                if (speedMillisLabel != null) {
+                    speedMillisLabel.setText(String.format("%.0f ms", sliderToMillis()));
+                }
+            });
+        }
+        // 将图面板的滑块和标签与主滑块/标签绑定，使两处同步显示/控制
+        if (graphSpeedSlider != null) {
+            // 保证范围与初始值一致
+            graphSpeedSlider.setMin(speedSlider.getMin());
+            graphSpeedSlider.setMax(speedSlider.getMax());
+            graphSpeedSlider.setValue(speedSlider.getValue());
+            // 双向绑定数值
+            graphSpeedSlider.valueProperty().bindBidirectional(speedSlider.valueProperty());
+        }
+        if (graphSpeedMillisLabel != null && speedMillisLabel != null) {
+            // 将图面板的毫秒标签绑定到主标签文本
+            graphSpeedMillisLabel.textProperty().bind(speedMillisLabel.textProperty());
+        }
         
         // 初始化信息区域
         updateGraphInfo();
@@ -333,8 +386,8 @@ public class MainController implements Initializable {
             graphAnimation.stop();
         }
 
-        Timeline timeline = new Timeline();
-        double stepMillis = Math.max(200, speedSlider.getValue());
+    Timeline timeline = new Timeline();
+    double stepMillis = sliderToMillis();
         for (int i = 0; i < vertices.size(); i++) {
             final int vertex = vertices.get(i);
             KeyFrame keyFrame = new KeyFrame(
@@ -367,7 +420,7 @@ public class MainController implements Initializable {
     if (graphAnimation != null) graphAnimation.stop();
 
     Timeline timeline = new Timeline();
-    double stepMillis = Math.max(200, speedSlider.getValue()); // 固定步长，受 speedSlider 控制
+    double stepMillis = sliderToMillis(); // 固定步长，受 speedSlider 控制
 
         // 记录路径上的边，动画期间将它们标记为"被考虑"(橘色)
         List<Edge> pathEdges = new ArrayList<>();
@@ -433,7 +486,7 @@ public class MainController implements Initializable {
     // 停止之前的图动画
     if (graphAnimation != null) graphAnimation.stop();
 
-    double stepMillis = Math.max(200, speedSlider.getValue());
+    double stepMillis = sliderToMillis();
     Timeline timeline = new Timeline();
 
         int n = currentGraph.getNumVertices();
@@ -636,8 +689,8 @@ public class MainController implements Initializable {
 
     // 动画播放
     graphVisualizationPane.clearHighlights();
-    // 使用 speedSlider 控制图动画速度
-    double stepMillis = Math.max(200, speedSlider.getValue());
+    // 使用 speedSlider 控制图动画速度（右快左慢）
+    double stepMillis = sliderToMillis();
     // 停止之前的图动画
     if (graphAnimation != null) graphAnimation.stop();
     Timeline timeline = new Timeline();
@@ -753,7 +806,7 @@ public class MainController implements Initializable {
             sortingAnimation.stop();
         }
         
-        double speed = speedSlider.getValue();
+        double speed = sliderToMillis();
         sortingAnimation = new Timeline(new KeyFrame(
             Duration.millis(speed),
             e -> {

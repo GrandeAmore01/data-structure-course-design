@@ -111,6 +111,13 @@
                                     <Button text="重置" onAction="#resetSorting" />
                                  </children>
                               </HBox>
+                                 <Label text="动画速度:" />
+                                 <HBox spacing="8.0" alignment="CENTER_LEFT">
+                                    <children>
+                                       <Slider fx:id="graphSpeedSlider" max="2000.0" min="100.0" showTickLabels="true" showTickMarks="true" />
+                                       <Label fx:id="graphSpeedMillisLabel" text="-- ms" />
+                                    </children>
+                                 </HBox>
                               
                               <Separator />
                               
@@ -162,7 +169,12 @@
                               </HBox>
                               
                               <Label text="动画速度:" />
-                              <Slider fx:id="speedSlider" max="2000.0" min="100.0" showTickLabels="true" showTickMarks="true" />
+                              <HBox spacing="8.0" alignment="CENTER_LEFT">
+                                 <children>
+                                    <Slider fx:id="speedSlider" max="2000.0" min="100.0" showTickLabels="true" showTickMarks="true" />
+                                    <Label fx:id="speedMillisLabel" text="-- ms" />
+                                 </children>
+                              </HBox>
                               
                               <Separator />
                               
