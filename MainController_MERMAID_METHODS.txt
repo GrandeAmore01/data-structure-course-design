@@ -1,0 +1,203 @@
+/**
+ * MainController.java - Mermaid DSL 处理相关代码
+ * 
+ * 以下代码应添加到 MainController 类中。
+ * 位置参考：
+ * 1. FXML 字段注入 -> 在类的字段声明区（与其他 @FXML 字段一起）
+ * 2. setupEventHandlers() 中的代码 -> 在该方法末尾
+ * 3. 其他方法 -> 在类的末尾或与同类方法在一起
+ */
+
+// ========== 1. FXML 字段注入（添加到字段声明区）==========
+
+@FXML private TextArea graphMermaidInput;
+@FXML private TextArea graphMermaidOutput;
+@FXML private Button graphMermaidConvertButton;
+@FXML private TextArea sortingMermaidInput;
+@FXML private TextArea sortingMermaidOutput;
+@FXML private Button sortingMermaidConvertButton;
+
+
+// ========== 2. 在 setupEventHandlers() 末尾添加 ==========
+
+// Mermaid DSL 处理事件绑定
+if (graphMermaidConvertButton != null) {
+    graphMermaidConvertButton.setOnAction(e -> handleGraphMermaidConvert());
+}
+
+if (sortingMermaidConvertButton != null) {
+    sortingMermaidConvertButton.setOnAction(e -> handleSortingMermaidConvert());
+}
+
+
+// ========== 3. 公开处理方法 ==========
+
+/**
+ * 处理图的 Mermaid DSL 输入
+ */
+public void handleMermaidGraphInput(String mermaidText) {
+    if (mermaidText == null || mermaidText.trim().isEmpty()) {
+        showAlert("错误", "Mermaid 输入不能为空");
+        return;
+    }
+    
+    try {
+        currentGraph = DataSerializer.parseMermaidToGraph(mermaidText);
+        
+        // 更新 UI
+        numVerticesField.setText(String.valueOf(currentGraph.getNumVertices()));
+        graphTypeCombo.setValue(currentGraph instanceof AdjacencyMatrix ? "邻接矩阵" : "邻接表");
+        if (directedCheckBox != null) {
+            directedCheckBox.setSelected(currentGraph.isDirected());
+        }
+        
+        // 更新可视化
+        graphVisualizationPane.setGraph(currentGraph);
+        updateGraphInfo("图已从 Mermaid DSL 加载");
+        lastSelectedVertex = -1;
+        
+        showAlert("成功", "图已成功从 Mermaid DSL 加载");
+    } catch (Exception e) {
+        showAlert("错误", "Mermaid 解析失败: " + e.getMessage());
+    }
+}
+
+/**
+ * 处理排序的 Mermaid DSL 输入
+ */
+public void handleMermaidSortingInput(String mermaidText) {
+    if (mermaidText == null || mermaidText.trim().isEmpty()) {
+        showAlert("错误", "Mermaid 输入不能为空");
+        return;
+    }
+    
+    try {
+        int[] array = DataSerializer.parseMermaidToArray(mermaidText);
+        
+        // 更新数组输入框
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < array.length; i++) {
+            sb.append(array[i]);
+            if (i < array.length - 1) sb.append(", ");
+        }
+        arrayInputField.setText(sb.toString());
+        
+        // 更新可视化
+        sortingVisualizationPane.setArray(array);
+        updateAlgorithmInfo();
+        
+        showAlert("成功", "排序数据已从 Mermaid DSL 加载");
+    } catch (Exception e) {
+        showAlert("错误", "Mermaid 解析失败: " + e.getMessage());
+    }
+}
+
+/**
+ * 获取当前图的 Mermaid DSL 输出
+ */
+public String getMermaidGraphOutput() {
+    if (currentGraph == null) {
+        return "";
+    }
+    return DataSerializer.graphToMermaid(currentGraph, true);
+}
+
+/**
+ * 获取当前排序数组的 Mermaid DSL 输出
+ */
+public String getMermaidSortingOutput() {
+    try {
+        String input = arrayInputField.getText().trim();
+        if (input.isEmpty()) {
+            return "";
+        }
+        
+        String[] parts = input.split("[,\\s]+");
+        int[] array = new int[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            array[i] = Integer.parseInt(parts[i]);
+        }
+        
+        String algorithmName = sortingAlgorithmCombo.getValue();
+        return DataSerializer.sortingArrayToMermaid(array, algorithmName);
+    } catch (Exception e) {
+        return "";
+    }
+}
+
+
+// ========== 4. 私有事件处理方法 ==========
+
+/**
+ * 处理图的转换按钮点击事件
+ */
+@FXML
+private void handleGraphMermaidConvert() {
+    String inputText = graphMermaidInput.getText().trim();
+    if (inputText.isEmpty()) {
+        showAlert("错误", "请输入 Mermaid DSL 文本或从下方输出复制");
+        return;
+    }
+    
+    handleMermaidGraphInput(inputText);
+    graphMermaidOutput.setText(getMermaidGraphOutput());
+}
+
+/**
+ * 处理排序的转换按钮点击事件
+ */
+@FXML
+private void handleSortingMermaidConvert() {
+    String inputText = sortingMermaidInput.getText().trim();
+    if (inputText.isEmpty()) {
+        showAlert("错误", "请输入 Mermaid DSL 文本或从下方输出复制");
+        return;
+    }
+    
+    handleMermaidSortingInput(inputText);
+    sortingMermaidOutput.setText(getMermaidSortingOutput());
+}
+
+/**
+ * 复制图的 Mermaid DSL 输出到剪贴板
+ */
+@FXML
+private void copyGraphMermaidOutput() {
+    String text = graphMermaidOutput.getText();
+    if (text == null || text.isEmpty()) {
+        showAlert("提示", "输出区为空，请先转换或添加数据");
+        return;
+    }
+    
+    try {
+        javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(text);
+        clipboard.setContent(content);
+        showAlert("成功", "已复制到剪贴板");
+    } catch (Exception e) {
+        showAlert("错误", "复制失败: " + e.getMessage());
+    }
+}
+
+/**
+ * 复制排序的 Mermaid DSL 输出到剪贴板
+ */
+@FXML
+private void copySortingMermaidOutput() {
+    String text = sortingMermaidOutput.getText();
+    if (text == null || text.isEmpty()) {
+        showAlert("提示", "输出区为空，请先转换或添加数据");
+        return;
+    }
+    
+    try {
+        javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(text);
+        clipboard.setContent(content);
+        showAlert("成功", "已复制到剪贴板");
+    } catch (Exception e) {
+        showAlert("错误", "复制失败: " + e.getMessage());
+    }
+}

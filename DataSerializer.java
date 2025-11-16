@@ -8,10 +8,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 数据序列化工具类
@@ -230,7 +231,229 @@ public class DataSerializer {
             bw.write(mermaidText);
         }
     }
-    
+
+    /**
+     * 从 Mermaid 文本解析 Graph
+     * 支持格式：graph LR/TD, v0["label"], v0 --> v1, v0 -- v1 等
+     * @param mermaidText Mermaid 文本
+     * @return 解析得到的 Graph 对象
+     * @throws IllegalArgumentException 如果格式不正确
+     */
+    public static Graph parseMermaidToGraph(String mermaidText) throws IllegalArgumentException {
+        if (mermaidText == null || mermaidText.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mermaid 文本不能为空");
+        }
+
+        String[] lines = mermaidText.split("\n");
+        boolean isDirected = true;
+        int maxVertexIndex = -1;
+        Map<Integer, String> labels = new HashMap<>();
+        List<EdgeDefinition> edges = new ArrayList<>();
+
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty() || line.startsWith("%%")) {
+                continue;
+            }
+
+            // 检查图的方向
+            if (line.startsWith("graph")) {
+                isDirected = !line.contains("--") && line.contains("--");
+                continue;
+            }
+
+            // 解析顶点定义
+            if (line.matches("v\\d+\\[.+\\]")) {
+                String[] parts = line.split("\\[");
+                if (parts.length >= 2) {
+                    int vertexIndex = extractVertexIndex(parts[0]);
+                    String label = extractNodeLabel(line);
+                    labels.put(vertexIndex, label);
+                    maxVertexIndex = Math.max(maxVertexIndex, vertexIndex);
+                }
+                continue;
+            }
+
+            // 解析边定义
+            EdgeDefinition edgeDef = parseEdgeLine(line, !isDirected);
+            if (edgeDef != null) {
+                edges.add(edgeDef);
+                maxVertexIndex = Math.max(maxVertexIndex, Math.max(edgeDef.source, edgeDef.destination));
+            }
+        }
+
+        if (maxVertexIndex < 0) {
+            throw new IllegalArgumentException("无法从 Mermaid 文本中解析出顶点");
+        }
+
+        // 创建图
+        Graph graph = new AdjacencyList(maxVertexIndex + 1, isDirected);
+
+        // 设置标签
+        for (Map.Entry<Integer, String> entry : labels.entrySet()) {
+            graph.setVertexLabel(entry.getKey(), entry.getValue());
+        }
+
+        // 添加边
+        for (EdgeDefinition edge : edges) {
+            double weight = edge.weight != null ? edge.weight : 1.0;
+            graph.addEdge(edge.source, edge.destination, weight);
+        }
+
+        return graph;
+    }
+
+    /**
+     * 从 Mermaid 文本解析数组
+     * 支持格式：graph LR, a0["value"], a0 --> a1 等
+     * @param mermaidText Mermaid 文本
+     * @return 解析得到的整数数组
+     * @throws IllegalArgumentException 如果格式不正确
+     */
+    public static int[] parseMermaidToArray(String mermaidText) throws IllegalArgumentException {
+        if (mermaidText == null || mermaidText.trim().isEmpty()) {
+            throw new IllegalArgumentException("Mermaid 文本不能为空");
+        }
+
+        String[] lines = mermaidText.split("\n");
+        Map<Integer, Integer> nodeValues = new TreeMap<>();
+        int maxIndex = -1;
+
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty() || line.startsWith("%%") || line.startsWith("graph")) {
+                continue;
+            }
+
+            // 解析节点定义
+            if (line.matches("a\\d+\\[.+\\]")) {
+                int nodeIndex = extractNodeIndex(line);
+                int value = extractNodeValue(line);
+                nodeValues.put(nodeIndex, value);
+                maxIndex = Math.max(maxIndex, nodeIndex);
+            }
+        }
+
+        if (maxIndex < 0) {
+            throw new IllegalArgumentException("无法从 Mermaid 文本中解析出数组");
+        }
+
+        // 构建数组
+        int[] result = new int[maxIndex + 1];
+        for (int i = 0; i <= maxIndex; i++) {
+            result[i] = nodeValues.getOrDefault(i, 0);
+        }
+
+        return result;
+    }
+
+    /**
+     * 提取顶点索引（图）
+     * 例如从 "v5" 中提取 5
+     */
+    private static int extractVertexIndex(String nodeDef) throws IllegalArgumentException {
+        Pattern pattern = Pattern.compile("v(\\d+)");
+        Matcher matcher = pattern.matcher(nodeDef);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        throw new IllegalArgumentException("无法从 '" + nodeDef + "' 提取顶点索引");
+    }
+
+    /**
+     * 提取节点索引（排序）
+     * 例如从 "a3["value"]" 中提取 3
+     */
+    private static int extractNodeIndex(String nodeDef) throws IllegalArgumentException {
+        Pattern pattern = Pattern.compile("a(\\d+)");
+        Matcher matcher = pattern.matcher(nodeDef);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        throw new IllegalArgumentException("无法从 '" + nodeDef + "' 提取节点索引");
+    }
+
+    /**
+     * 提取节点标签
+     * 例如从 "v1["label"]" 中提取 label
+     */
+    private static String extractNodeLabel(String nodeDef) throws IllegalArgumentException {
+        Pattern pattern = Pattern.compile("\\[\"(.*?)\"\\]");
+        Matcher matcher = pattern.matcher(nodeDef);
+        if (matcher.find()) {
+            String label = matcher.group(1);
+            // 反转义
+            label = label.replace("\\\"", "\"").replace("\\(", "[").replace("\\)", "]");
+            return label;
+        }
+        throw new IllegalArgumentException("无法从 '" + nodeDef + "' 提取标签");
+    }
+
+    /**
+     * 提取节点值（排序）
+     * 例如从 "a3["42"]" 中提取 42
+     */
+    private static int extractNodeValue(String nodeDef) throws IllegalArgumentException {
+        Pattern pattern = Pattern.compile("\\[\"(\\d+)\"\\]");
+        Matcher matcher = pattern.matcher(nodeDef);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        throw new IllegalArgumentException("无法从 '" + nodeDef + "' 提取节点值");
+    }
+
+    /**
+     * 解析边定义
+     * 例如：v0 --> v1, v0 -- |2.5| v1 等
+     */
+    private static EdgeDefinition parseEdgeLine(String line, boolean isUndirected) {
+        // 匹配有向边 -->
+        Pattern directedPattern = Pattern.compile("(v\\d+)\\s*-->\\s*(?:\\|(.*?)\\|)?(v\\d+)");
+        Matcher directedMatcher = directedPattern.matcher(line);
+        if (directedMatcher.find()) {
+            int source = extractVertexIndex(directedMatcher.group(1));
+            int destination = extractVertexIndex(directedMatcher.group(3));
+            Double weight = null;
+            if (directedMatcher.group(2) != null && !directedMatcher.group(2).trim().isEmpty()) {
+                try {
+                    weight = Double.parseDouble(directedMatcher.group(2).trim());
+                } catch (NumberFormatException e) {
+                    weight = null;
+                }
+            }
+            return new EdgeDefinition(source, destination, weight);
+        }
+
+        // 匹配无向边 --
+        Pattern undirectedPattern = Pattern.compile("(v\\d+)\\s*--\\s*(?:\\|(.*?)\\|)?(v\\d+)");
+        Matcher undirectedMatcher = undirectedPattern.matcher(line);
+        if (undirectedMatcher.find()) {
+            int source = extractVertexIndex(undirectedMatcher.group(1));
+            int destination = extractVertexIndex(undirectedMatcher.group(3));
+            Double weight = null;
+            if (undirectedMatcher.group(2) != null && !undirectedMatcher.group(2).trim().isEmpty()) {
+                try {
+                    weight = Double.parseDouble(undirectedMatcher.group(2).trim());
+                } catch (NumberFormatException e) {
+                    weight = null;
+                }
+            }
+            return new EdgeDefinition(source, destination, weight);
+        }
+
+        // 匹配排序数组的箭头 -->（节点格式 a0, a1 等）
+        Pattern arrayPattern = Pattern.compile("(a\\d+)\\s*-->\\s*(a\\d+)");
+        Matcher arrayMatcher = arrayPattern.matcher(line);
+        if (arrayMatcher.find()) {
+            // 对于排序数组，我们也返回边定义但使用节点编号
+            int source = extractNodeIndex(arrayMatcher.group(1));
+            int destination = extractNodeIndex(arrayMatcher.group(2));
+            return new EdgeDefinition(source, destination, null);
+        }
+
+        return null;
+    }
+
     /**
      * 排序数据容器类
      */
@@ -249,6 +472,31 @@ public class DataSerializer {
         
         public String getAlgorithmName() {
             return algorithmName;
+        }
+    }
+
+    /**
+     * 边定义内部类
+     * 用于存储 Mermaid 解析中的边信息
+     */
+    public static class EdgeDefinition {
+        public final int source;
+        public final int destination;
+        public final Double weight;
+
+        public EdgeDefinition(int source, int destination, Double weight) {
+            this.source = source;
+            this.destination = destination;
+            this.weight = weight;
+        }
+
+        @Override
+        public String toString() {
+            return "EdgeDefinition{" +
+                    "source=" + source +
+                    ", destination=" + destination +
+                    ", weight=" + weight +
+                    '}';
         }
     }
     

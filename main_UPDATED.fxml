@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.datastruct.visualizer.controller.MainController">
+   <top>
+      <MenuBar BorderPane.alignment="CENTER">
+         <menus>
+            <Menu mnemonicParsing="false" text="文件">
+               <items>
+                  <MenuItem fx:id="saveMenuItem" mnemonicParsing="false" text="保存" />
+                  <MenuItem fx:id="loadMenuItem" mnemonicParsing="false" text="加载" />
+                  <SeparatorMenuItem mnemonicParsing="false" />
+                  <MenuItem mnemonicParsing="false" text="退出" />
+               </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="帮助">
+               <items>
+                  <MenuItem mnemonicParsing="false" text="关于" />
+               </items>
+            </Menu>
+         </menus>
+      </MenuBar>
+   </top>
+   <center>
+      <TabPane fx:id="mainTabPane" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+         <tabs>
+            <Tab fx:id="graphTab" text="图数据结构">
+               <content>
+                  <VBox spacing="10.0">
+                     <padding>
+                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                     </padding>
+                     <children>
+                        <!-- 主 SplitPane -->
+                        <SplitPane dividerPositions="0.8" orientation="HORIZONTAL" VBox.vgrow="ALWAYS">
+                           <items>
+                              <VBox fx:id="graphContainer" style="-fx-background-color: white;">
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
+                              </VBox>
+                              <VBox spacing="10.0">
+                                 <children>
+                                    <Label styleClass="section-title" text="图控制面板" />
+                                    <Separator />
+                                    
+                                    <!-- 图创建区域 -->
+                                    <Label text="创建图:" />
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <Label text="类型:" />
+                                          <ComboBox fx:id="graphTypeCombo" prefWidth="100.0" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <CheckBox fx:id="directedCheckBox" text="有向图" selected="true" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <Label text="顶点数:" />
+                                          <TextField fx:id="numVerticesField" prefWidth="80.0" />
+                                          <Button fx:id="createGraphButton" text="创建" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Separator />
+                                    
+                                    <!-- 边操作区域 -->
+                                    <Label text="边操作:" />
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <Label text="起点:" />
+                                          <TextField fx:id="sourceVertexField" prefWidth="50.0" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <Label text="终点:" />
+                                          <TextField fx:id="destVertexField" prefWidth="50.0" />
+                                       </children>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <Label text="权重:" />
+                                          <TextField fx:id="edgeWeightField" prefWidth="50.0" text="1.0" />
+                                       </children>
+                                    </HBox>
+                                    <HBox spacing="5.0">
+                                       <children>
+                                          <Button fx:id="addEdgeButton" text="添加边" />
+                                          <Button fx:id="removeEdgeButton" text="删除边" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Separator />
+                                    
+                                    <!-- 算法执行区域 -->
+                                    <Label text="图算法:" />
+                                    <ComboBox fx:id="graphAlgorithmCombo" prefWidth="150.0" />
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <Label text="起始顶点:" />
+                                          <TextField fx:id="startVertexField" prefWidth="50.0" />
+                                          <Label text="目标顶点:" />
+                                          <TextField fx:id="targetVertexField" prefWidth="50.0" />
+                                       </children>
+                                    </HBox>
+                                    <Button fx:id="runAlgorithmButton" text="运行算法" />
+                                    <HBox spacing="5.0">
+                                       <children>
+                                          <Button text="暂停/继续" onAction="#pauseSorting" />
+                                          <Button text="重置" onAction="#resetSorting" />
+                                       </children>
+                                    </HBox>
+                                    <Label text="动画速度:" />
+                                    <HBox spacing="8.0" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Slider fx:id="graphSpeedSlider" max="2000.0" min="100.0" showTickLabels="true" showTickMarks="true" />
+                                          <Label fx:id="graphSpeedMillisLabel" text="-- ms" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Separator />
+                                    
+                                    <!-- 信息显示区域 -->
+                                    <Label text="图信息:" />
+                                    <TextArea fx:id="graphInfoArea" editable="false" prefHeight="150.0" wrapText="true" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
+                              </VBox>
+                           </items>
+                        </SplitPane>
+                        
+                        <!-- Mermaid DSL 转换区域 -->
+                        <TitledPane animated="true" collapsible="true" text="Mermaid DSL 转换">
+                           <content>
+                              <VBox spacing="8.0">
+                                 <padding>
+                                    <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" />
+                                 </padding>
+                                 <children>
+                                    <!-- 输入区域 -->
+                                    <Label text="输入 Mermaid DSL:" />
+                                    <TextArea fx:id="graphMermaidInput" prefHeight="80.0" wrapText="true" style="-fx-font-family: 'Consolas', 'Monaco', monospace;" />
+                                    
+                                    <!-- 转换按钮 -->
+                                    <HBox spacing="5.0">
+                                       <children>
+                                          <Button fx:id="graphMermaidConvertButton" text="从 DSL 加载图" style="-fx-font-size: 12;" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- 输出区域 -->
+                                    <Label text="转换输出:" />
+                                    <TextArea fx:id="graphMermaidOutput" prefHeight="80.0" editable="false" wrapText="true" style="-fx-font-family: 'Consolas', 'Monaco', monospace;" />
+                                    
+                                    <!-- 复制按钮 -->
+                                    <HBox spacing="5.0">
+                                       <children>
+                                          <Button text="复制输出" onAction="#copyGraphMermaidOutput" style="-fx-font-size: 12;" />
+                                       </children>
+                                    </HBox>
+                                 </children>
+                              </VBox>
+                           </content>
+                        </TitledPane>
+                     </children>
+                  </VBox>
+               </content>
+            </Tab>
+            <Tab fx:id="sortingTab" text="排序算法">
+               <content>
+                  <VBox spacing="10.0">
+                     <padding>
+                        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                     </padding>
+                     <children>
+                        <!-- 主 SplitPane -->
+                        <SplitPane dividerPositions="0.8" orientation="HORIZONTAL" VBox.vgrow="ALWAYS">
+                           <items>
+                              <VBox fx:id="sortingContainer" style="-fx-background-color: white;">
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
+                              </VBox>
+                              <VBox spacing="10.0">
+                                 <children>
+                                    <Label styleClass="section-title" text="排序控制面板" />
+                                    <Separator />
+                                    
+                                    <!-- 数组输入区域 -->
+                                    <Label text="数组输入:" />
+                                    <TextArea fx:id="arrayInputField" prefHeight="60.0" wrapText="true" />
+                                    <Button fx:id="setArrayButton" text="设置数组" />
+                                    
+                                    <Separator />
+                                    
+                                    <!-- 算法选择区域 -->
+                                    <Label text="排序算法:" />
+                                    <ComboBox fx:id="sortingAlgorithmCombo" prefWidth="150.0" />
+                                    
+                                    <!-- 动画控制区域 -->
+                                    <Label text="动画控制:" />
+                                    <HBox spacing="5.0">
+                                       <children>
+                                          <Button fx:id="startSortingButton" text="开始排序" />
+                                          <Button fx:id="pauseButton" text="暂停" />
+                                          <Button fx:id="resetButton" text="重置" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Label text="动画速度:" />
+                                    <HBox spacing="8.0" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Slider fx:id="speedSlider" max="2000.0" min="100.0" showTickLabels="true" showTickMarks="true" />
+                                          <Label fx:id="speedMillisLabel" text="-- ms" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <Separator />
+                                    
+                                    <!-- 算法信息区域 -->
+                                    <Label text="算法信息:" />
+                                    <TextArea fx:id="algorithmInfoArea" editable="false" prefHeight="200.0" wrapText="true" />
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
+                              </VBox>
+                           </items>
+                        </SplitPane>
+                        
+                        <!-- Mermaid DSL 转换区域 -->
+                        <TitledPane animated="true" collapsible="true" text="Mermaid DSL 转换">
+                           <content>
+                              <VBox spacing="8.0">
+                                 <padding>
+                                    <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" />
+                                 </padding>
+                                 <children>
+                                    <!-- 输入区域 -->
+                                    <Label text="输入 Mermaid DSL:" />
+                                    <TextArea fx:id="sortingMermaidInput" prefHeight="80.0" wrapText="true" style="-fx-font-family: 'Consolas', 'Monaco', monospace;" />
+                                    
+                                    <!-- 转换按钮 -->
+                                    <HBox spacing="5.0">
+                                       <children>
+                                          <Button fx:id="sortingMermaidConvertButton" text="从 DSL 加载数组" style="-fx-font-size: 12;" />
+                                       </children>
+                                    </HBox>
+                                    
+                                    <!-- 输出区域 -->
+                                    <Label text="转换输出:" />
+                                    <TextArea fx:id="sortingMermaidOutput" prefHeight="80.0" editable="false" wrapText="true" style="-fx-font-family: 'Consolas', 'Monaco', monospace;" />
+                                    
+                                    <!-- 复制按钮 -->
+                                    <HBox spacing="5.0">
+                                       <children>
+                                          <Button text="复制输出" onAction="#copySortingMermaidOutput" style="-fx-font-size: 12;" />
+                                       </children>
+                                    </HBox>
+                                 </children>
+                              </VBox>
+                           </content>
+                        </TitledPane>
+                     </children>
+                  </VBox>
+               </content>
+            </Tab>
+         </tabs>
+      </TabPane>
+   </center>
+</BorderPane>
