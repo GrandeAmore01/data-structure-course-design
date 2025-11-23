@@ -67,6 +67,10 @@ public class MainController implements Initializable {
     @FXML private MenuItem saveMenuItem;
     @FXML private MenuItem loadMenuItem;
     
+    // DSL 处理: 从文本解析图并加载到可视化
+    @FXML private TextArea dslInput; // DSL 输入区
+    @FXML private Button loadDslButton;
+    
     // 可视化面板
     private GraphVisualizationPane graphVisualizationPane;
     private SortingVisualizationPane sortingVisualizationPane;
@@ -997,6 +1001,26 @@ public class MainController implements Initializable {
             } catch (Exception e) {
                 showAlert("错误", "加载失败: " + e.getMessage());
             }
+        }
+    }
+    
+    // DSL 处理: 从文本解析图并加载到可视化
+    @FXML
+    private void handleLoadDsl() {
+        if (dslInput == null) return;
+        String txt = dslInput.getText();
+        if (txt == null || txt.trim().isEmpty()) {
+            showAlert("错误", "DSL 输入不能为空");
+            return;
+        }
+        try {
+            Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(txt);
+            currentGraph = g;
+            graphVisualizationPane.setGraph(g);
+            updateGraphInfo();
+            showAlert("成功", "已根据 DSL 创建图");
+        } catch (IllegalArgumentException ex) {
+            showAlert("DSL 错误", ex.getMessage());
         }
     }
     
