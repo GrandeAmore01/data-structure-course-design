@@ -37,6 +37,10 @@ public class MainController implements Initializable {
     @FXML private CheckBox directedCheckBox;
     @FXML private TextField numVerticesField;
     @FXML private Button createGraphButton;
+    @FXML private TextField vertexLabelField;
+    @FXML private TextField removeVertexField;
+    @FXML private Button addVertexButton;
+    @FXML private Button removeVertexButton;
     @FXML private TextField sourceVertexField;
     @FXML private TextField destVertexField;
     @FXML private TextField edgeWeightField;
@@ -196,6 +200,8 @@ public class MainController implements Initializable {
     
     private void setupEventHandlers() {
         createGraphButton.setOnAction(e -> createGraph());
+        addVertexButton.setOnAction(e -> addVertex());
+        removeVertexButton.setOnAction(e -> removeVertex());
         addEdgeButton.setOnAction(e -> addEdge());
         removeEdgeButton.setOnAction(e -> removeEdge());
         runAlgorithmButton.setOnAction(e -> runGraphAlgorithm());
@@ -237,6 +243,94 @@ public class MainController implements Initializable {
             
         } catch (NumberFormatException e) {
             showAlert("错误", "请输入有效的顶点数量");
+        }
+    }
+    
+    @FXML
+    private void addVertex() {
+        if (currentGraph == null) {
+            showAlert("错误", "请先创建图");
+            return;
+        }
+        
+        // 检查顶点数量限制
+        if (currentGraph.getNumVertices() >= 20) {
+            showAlert("错误", "顶点数量已达到上限（20个）");
+            return;
+        }
+        
+        // 停止正在运行的动画（如果有）
+        if (graphAnimation != null && isGraphAnimationRunning) {
+            graphAnimation.stop();
+            isGraphAnimationRunning = false;
+        }
+        
+        try {
+            String label = vertexLabelField.getText();
+            if (label == null || label.trim().isEmpty()) {
+                label = String.valueOf(currentGraph.getNumVertices());
+            }
+            
+            currentGraph.addVertex(label.trim());
+            graphVisualizationPane.setGraph(currentGraph);
+            updateGraphInfo("已添加顶点: " + label.trim() + " (索引: " + (currentGraph.getNumVertices() - 1) + ")");
+            
+            // 清空输入框
+            vertexLabelField.clear();
+            // 重置点击交互状态
+            lastSelectedVertex = -1;
+            
+        } catch (Exception e) {
+            showAlert("错误", "添加顶点失败: " + e.getMessage());
+        }
+    }
+    
+    @FXML
+    private void removeVertex() {
+        if (currentGraph == null) {
+            showAlert("错误", "请先创建图");
+            return;
+        }
+        
+        // 停止正在运行的动画（如果有）
+        if (graphAnimation != null && isGraphAnimationRunning) {
+            graphAnimation.stop();
+            isGraphAnimationRunning = false;
+        }
+        
+        try {
+            String indexText = removeVertexField.getText();
+            if (indexText == null || indexText.trim().isEmpty()) {
+                showAlert("错误", "请输入要删除的顶点索引");
+                return;
+            }
+            
+            int vertex = Integer.parseInt(indexText.trim());
+            
+            if (vertex < 0 || vertex >= currentGraph.getNumVertices()) {
+                showAlert("错误", "顶点索引超出范围 (0-" + (currentGraph.getNumVertices() - 1) + ")");
+                return;
+            }
+            
+            if (currentGraph.getNumVertices() <= 1) {
+                showAlert("错误", "无法删除最后一个顶点");
+                return;
+            }
+            
+            String removedLabel = currentGraph.getVertexLabel(vertex);
+            currentGraph.removeVertex(vertex);
+            graphVisualizationPane.setGraph(currentGraph);
+            updateGraphInfo("已删除顶点: " + removedLabel + " (原索引: " + vertex + ")\\n注意: 索引大于 " + vertex + " 的顶点索引已减1");
+            
+            // 清空输入框
+            removeVertexField.clear();
+            // 重置点击交互状态
+            lastSelectedVertex = -1;
+            
+        } catch (NumberFormatException e) {
+            showAlert("错误", "请输入有效的顶点索引");
+        } catch (Exception e) {
+            showAlert("错误", "删除顶点失败: " + e.getMessage());
         }
     }
     

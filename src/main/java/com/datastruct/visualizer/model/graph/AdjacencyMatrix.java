@@ -1,7 +1,9 @@
 package com.datastruct.visualizer.model.graph;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 邻接矩阵存储的图
@@ -120,6 +122,82 @@ public class AdjacencyMatrix extends Graph {
             }
             System.out.println();
         }
+    }
+    
+    @Override
+    public void addVertex(String label) {
+        // 创建新的更大的矩阵
+        int newSize = numVertices + 1;
+        double[][] newMatrix = new double[newSize][newSize];
+        
+        // 复制原有数据
+        for (int i = 0; i < numVertices; i++) {
+            for (int j = 0; j < numVertices; j++) {
+                newMatrix[i][j] = matrix[i][j];
+            }
+        }
+        
+        // 初始化新行和新列
+        for (int i = 0; i < newSize; i++) {
+            newMatrix[numVertices][i] = (i == numVertices) ? 0 : INFINITY;
+            newMatrix[i][numVertices] = (i == numVertices) ? 0 : INFINITY;
+        }
+        
+        // 更新矩阵和顶点数
+        matrix = newMatrix;
+        numVertices = newSize;
+        
+        // 添加顶点标签
+        if (label == null || label.trim().isEmpty()) {
+            label = String.valueOf(numVertices - 1);
+        }
+        vertexLabels.put(numVertices - 1, label);
+    }
+    
+    @Override
+    public void removeVertex(int vertex) {
+        if (!isValidVertex(vertex)) {
+            throw new IllegalArgumentException("顶点索引无效: " + vertex);
+        }
+        
+        // 创建新的更小的矩阵
+        int newSize = numVertices - 1;
+        if (newSize <= 0) {
+            throw new IllegalArgumentException("无法删除最后一个顶点");
+        }
+        
+        double[][] newMatrix = new double[newSize][newSize];
+        
+        // 复制数据，跳过被删除的行和列
+        int newRow = 0;
+        for (int i = 0; i < numVertices; i++) {
+            if (i == vertex) continue;
+            
+            int newCol = 0;
+            for (int j = 0; j < numVertices; j++) {
+                if (j == vertex) continue;
+                newMatrix[newRow][newCol] = matrix[i][j];
+                newCol++;
+            }
+            newRow++;
+        }
+        
+        // 更新矩阵和顶点数
+        matrix = newMatrix;
+        numVertices = newSize;
+        
+        // 重新映射顶点标签（索引大于被删除顶点的都要-1）
+        Map<Integer, String> newLabels = new HashMap<>();
+        for (Map.Entry<Integer, String> entry : vertexLabels.entrySet()) {
+            int oldIndex = entry.getKey();
+            if (oldIndex < vertex) {
+                newLabels.put(oldIndex, entry.getValue());
+            } else if (oldIndex > vertex) {
+                newLabels.put(oldIndex - 1, entry.getValue());
+            }
+            // oldIndex == vertex 的标签被删除（不添加到新map）
+        }
+        vertexLabels = newLabels;
     }
 }
 

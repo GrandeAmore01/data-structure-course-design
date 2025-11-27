@@ -64,6 +64,25 @@
                               
                               <Separator />
                               
+                              <!-- 顶点操作区域 -->
+                              <Label text="顶点操作:" />
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="标签:" />
+                                    <TextField fx:id="vertexLabelField" prefWidth="80.0" promptText="可选" />
+                                    <Button fx:id="addVertexButton" text="添加顶点" />
+                                 </children>
+                              </HBox>
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                 <children>
+                                    <Label text="索引:" />
+                                    <TextField fx:id="removeVertexField" prefWidth="80.0" />
+                                    <Button fx:id="removeVertexButton" text="删除顶点" />
+                                 </children>
+                              </HBox>
+                              
+                              <Separator />
+                              
                               <!-- 边操作区域 -->
                               <Label text="边操作:" />
                               <HBox alignment="CENTER_LEFT" spacing="5.0">

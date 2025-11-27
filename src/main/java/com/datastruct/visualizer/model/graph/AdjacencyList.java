@@ -157,6 +157,65 @@ public class AdjacencyList extends Graph {
         }
     }
     
+    @Override
+    public void addVertex(String label) {
+        // 在邻接表末尾添加新的空列表
+        adjacencyList.add(new ArrayList<>());
+        
+        // 更新顶点数
+        numVertices++;
+        
+        // 添加顶点标签
+        if (label == null || label.trim().isEmpty()) {
+            label = String.valueOf(numVertices - 1);
+        }
+        vertexLabels.put(numVertices - 1, label);
+    }
+    
+    @Override
+    public void removeVertex(int vertex) {
+        if (!isValidVertex(vertex)) {
+            throw new IllegalArgumentException("顶点索引无效: " + vertex);
+        }
+        
+        if (numVertices <= 1) {
+            throw new IllegalArgumentException("无法删除最后一个顶点");
+        }
+        
+        // 1. 删除该顶点的邻接表
+        adjacencyList.remove(vertex);
+        
+        // 2. 从所有其他顶点的邻接表中移除指向该顶点的边
+        for (List<EdgeNode> list : adjacencyList) {
+            list.removeIf(node -> node.vertex == vertex);
+        }
+        
+        // 3. 重新映射所有顶点索引：大于被删除索引的都要-1
+        for (List<EdgeNode> list : adjacencyList) {
+            for (EdgeNode node : list) {
+                if (node.vertex > vertex) {
+                    node.vertex--;
+                }
+            }
+        }
+        
+        // 4. 更新顶点数
+        numVertices--;
+        
+        // 5. 重新映射顶点标签
+        Map<Integer, String> newLabels = new HashMap<>();
+        for (Map.Entry<Integer, String> entry : vertexLabels.entrySet()) {
+            int oldIndex = entry.getKey();
+            if (oldIndex < vertex) {
+                newLabels.put(oldIndex, entry.getValue());
+            } else if (oldIndex > vertex) {
+                newLabels.put(oldIndex - 1, entry.getValue());
+            }
+            // oldIndex == vertex 的标签被删除（不添加到新map）
+        }
+        vertexLabels = newLabels;
+    }
+    
     /**
      * 边节点内部类
      */

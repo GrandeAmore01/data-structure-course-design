@@ -31,6 +31,10 @@ public abstract class Graph {
     public abstract List<Integer> getNeighbors(int vertex);
     public abstract List<Edge> getAllEdges();
     
+    // 动态顶点操作方法
+    public abstract void addVertex(String label);
+    public abstract void removeVertex(int vertex);
+    
     // 通用方法
     public int getNumVertices() {
         return numVertices;
