@@ -37,7 +37,6 @@ public class MainController implements Initializable {
     @FXML private CheckBox directedCheckBox;
     @FXML private TextField numVerticesField;
     @FXML private Button createGraphButton;
-    @FXML private TextField vertexLabelField;
     @FXML private TextField removeVertexField;
     @FXML private Button addVertexButton;
     @FXML private Button removeVertexButton;
@@ -266,17 +265,14 @@ public class MainController implements Initializable {
         }
         
         try {
-            String label = vertexLabelField.getText();
-            if (label == null || label.trim().isEmpty()) {
-                label = String.valueOf(currentGraph.getNumVertices());
-            }
+            // 新顶点的索引
+            int newVertexIndex = currentGraph.getNumVertices();
             
-            currentGraph.addVertex(label.trim());
+            // 使用索引作为标签
+            currentGraph.addVertex(String.valueOf(newVertexIndex));
             graphVisualizationPane.setGraph(currentGraph);
-            updateGraphInfo("已添加顶点: " + label.trim() + " (索引: " + (currentGraph.getNumVertices() - 1) + ")");
+            updateGraphInfo("已添加顶点 " + newVertexIndex);
             
-            // 清空输入框
-            vertexLabelField.clear();
             // 重置点击交互状态
             lastSelectedVertex = -1;
             

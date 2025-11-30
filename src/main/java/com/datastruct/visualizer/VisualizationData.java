@@ -21,7 +21,7 @@ public class VisualizationData {
     /**
      * Adds an edge to the graph.
      *
-     * @param from The starting node.
+   +-  * @param from The starting node.
      * @param to   The ending node.
      */
     public void addEdge(String from, String to) {
