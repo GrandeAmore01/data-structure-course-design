@@ -90,6 +90,68 @@ public class DslParser {
         return g;
     }
 
+    public static java.util.List<DslCommand> parseCommands(String text) throws IllegalArgumentException {
+        java.util.List<DslCommand> list = new java.util.ArrayList<>();
+        if (text == null) return list;
+        String[] lines = text.split("\\r?\\n");
+        int lineNo = 0;
+        for (String raw: lines) {
+            lineNo++;
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("#")) continue;
+            String lower = line.toLowerCase();
+            try {
+                if (lower.startsWith("add vertex")) {
+                    String[] tok = line.split("\\s+",4);
+                    int id = Integer.parseInt(tok[2]);
+                    String label = tok.length>3? line.substring(line.indexOf("label")+6).replaceAll("\"","") : null;
+                    if (label!=null) list.add(new DslCommand(DslCommand.Type.ADD_VERTEX,lineNo,String.valueOf(id),label));
+                    else list.add(new DslCommand(DslCommand.Type.ADD_VERTEX,lineNo,String.valueOf(id)));
+                } else if (lower.startsWith("remove vertex")) {
+                    String[] tok = line.split("\\s+");
+                    int id = Integer.parseInt(tok[2]);
+                    list.add(new DslCommand(DslCommand.Type.REMOVE_VERTEX,lineNo,String.valueOf(id)));
+                } else if (lower.startsWith("add edge")) {
+                    // add edge u -> v weight w
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("add edge (\\d+) .*? (\\d+)(?: .*? (\\d+(?:\\.\\d+)?))?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(line);
+                    if(!m.find()) throw new IllegalArgumentException();
+                    String u=m.group(1),v=m.group(2),w=m.group(3)==null?"1":m.group(3);
+                    list.add(new DslCommand(DslCommand.Type.ADD_EDGE,lineNo,u,v,w));
+                } else if (lower.startsWith("remove edge")) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("remove edge (\\d+) .*? (\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(line);
+                    if(!m.find()) throw new IllegalArgumentException();
+                    list.add(new DslCommand(DslCommand.Type.REMOVE_EDGE,lineNo,m.group(1),m.group(2)));
+                } else if (lower.startsWith("set label")) {
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("set label (\\d+) \"([^\"]*)\"", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(line);
+                    if(!m.find()) throw new IllegalArgumentException();
+                    list.add(new DslCommand(DslCommand.Type.SET_LABEL,lineNo,m.group(1),m.group(2)));
+                } else if (lower.startsWith("set directed")) {
+                    String[] tok=line.split("\\s+");
+                    list.add(new DslCommand(DslCommand.Type.SET_DIRECTED,lineNo,tok[2]));
+                } else if (lower.startsWith("run dfs")) {
+                    String[] tok=line.split("\\s+");
+                    int idx=java.util.Arrays.asList(tok).indexOf("start");
+                    list.add(new DslCommand(DslCommand.Type.RUN_DFS,lineNo,tok[idx+1]));
+                } else if (lower.startsWith("run bfs")) {
+                    String[] tok=line.split("\\s+");
+                    int idx=java.util.Arrays.asList(tok).indexOf("start");
+                    list.add(new DslCommand(DslCommand.Type.RUN_BFS,lineNo,tok[idx+1]));
+                } else if (lower.startsWith("run dijkstra")) {
+                    java.util.regex.Matcher m=java.util.regex.Pattern.compile("run dijkstra start (\\d+) target (\\d+)",java.util.regex.Pattern.CASE_INSENSITIVE).matcher(line);
+                    if(!m.find()) throw new IllegalArgumentException();
+                    list.add(new DslCommand(DslCommand.Type.RUN_DIJKSTRA,lineNo,m.group(1),m.group(2)));
+                } else if (lower.startsWith("run mst")) {
+                    list.add(new DslCommand(DslCommand.Type.RUN_MST,lineNo));
+                } else {
+                    throw new IllegalArgumentException("未知指令");
+                }
+            } catch(Exception ex){
+                throw new IllegalArgumentException("解析 DSL 第 "+lineNo+" 行失败: "+line);
+            }
+        }
+        return list;
+    }
+
     private static class EdgeDef {
         int src, dst; double weight;
         EdgeDef(int s,int d,double w){src=s;dst=d;weight=w;}

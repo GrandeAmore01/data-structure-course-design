@@ -5,6 +5,7 @@ import com.datastruct.visualizer.model.sorting.*;
 import com.datastruct.visualizer.view.GraphVisualizationPane;
 import com.datastruct.visualizer.view.SortingVisualizationPane;
 import com.datastruct.visualizer.util.DataSerializer;
+import com.datastruct.visualizer.util.DslCommand;
 import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
 import javafx.fxml.FXML;
@@ -1099,19 +1100,108 @@ public class MainController implements Initializable {
     @FXML
     private void handleLoadDsl() {
         if (dslInput == null) return;
-        String txt = dslInput.getText();
-        if (txt == null || txt.trim().isEmpty()) {
+        String script = dslInput.getText();
+        if (script == null || script.trim().isEmpty()) {
             showAlert("错误", "DSL 输入不能为空");
             return;
         }
+        String trimmed = script.stripLeading();
+        if (trimmed.toLowerCase().startsWith("graph")) {
+            // 旧版 graph { } 块语法
+            try {
+                Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(trimmed);
+                currentGraph = g;
+                graphVisualizationPane.setGraph(g);
+                updateGraphInfo();
+                showAlert("成功", "已根据 DSL 创建/替换图");
+            } catch (IllegalArgumentException ex) {
+                showAlert("DSL 错误", ex.getMessage());
+            }
+            return;
+        }
+        // 行指令模式
         try {
-            Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(txt);
-            currentGraph = g;
-            graphVisualizationPane.setGraph(g);
-            updateGraphInfo();
-            showAlert("成功", "已根据 DSL 创建图");
+            java.util.List<DslCommand> cmds = com.datastruct.visualizer.util.DslParser.parseCommands(script);
+            executeCommands(cmds);
         } catch (IllegalArgumentException ex) {
             showAlert("DSL 错误", ex.getMessage());
+        }
+    }
+
+    private void executeCommands(java.util.List<DslCommand> cmds) {
+        for (DslCommand cmd : cmds) {
+            try {
+                switch (cmd.type) {
+                    case ADD_VERTEX -> {
+                        ensureGraph();
+                        int id = Integer.parseInt(cmd.args[0]);
+                        if (id < 0 || id >= currentGraph.getNumVertices()) {
+                            showAlert("错误", "顶点索引超出范围: " + id);
+                            return;
+                        }
+                        // 标签
+                        if (cmd.args.length > 1) currentGraph.setVertexLabel(id, cmd.args[1]);
+                        graphVisualizationPane.redraw();
+                    }
+                    case REMOVE_VERTEX -> {
+                        showAlert("提示", "暂不支持删除顶点（图顶点数固定）");
+                    }
+                    case ADD_EDGE -> {
+                        ensureGraph();
+                        int u = Integer.parseInt(cmd.args[0]);
+                        int v = Integer.parseInt(cmd.args[1]);
+                        double w = Double.parseDouble(cmd.args[2]);
+                        currentGraph.addEdge(u, v, w);
+                        graphVisualizationPane.redraw();
+                    }
+                    case REMOVE_EDGE -> {
+                        ensureGraph();
+                        int u = Integer.parseInt(cmd.args[0]);
+                        int v = Integer.parseInt(cmd.args[1]);
+                        currentGraph.removeEdge(u, v);
+                        graphVisualizationPane.redraw();
+                    }
+                    case SET_LABEL -> {
+                        ensureGraph();
+                        int id = Integer.parseInt(cmd.args[0]);
+                        currentGraph.setVertexLabel(id, cmd.args[1]);
+                        graphVisualizationPane.redraw();
+                    }
+                    case SET_DIRECTED -> {
+                        showAlert("提示", "暂不支持运行时切换有向/无向，请创建新图");
+                    }
+                    case RUN_DFS -> {
+                        graphAlgorithmCombo.setValue("深度优先搜索");
+                        startVertexField.setText(cmd.args[0]);
+                        runGraphAlgorithm();
+                    }
+                    case RUN_BFS -> {
+                        graphAlgorithmCombo.setValue("广度优先搜索");
+                        startVertexField.setText(cmd.args[0]);
+                        runGraphAlgorithm();
+                    }
+                    case RUN_DIJKSTRA -> {
+                        graphAlgorithmCombo.setValue("最短路径生成");
+                        startVertexField.setText(cmd.args[0]);
+                        targetVertexField.setText(cmd.args[1]);
+                        runGraphAlgorithm();
+                    }
+                    case RUN_MST -> {
+                        graphAlgorithmCombo.setValue("最小生成树(Kruskal)");
+                        runGraphAlgorithm();
+                    }
+                }
+            } catch (Exception e) {
+                showAlert("执行错误", "第" + cmd.line + "行: " + e.getMessage());
+                return;
+            }
+        }
+    }
+
+    private void ensureGraph() {
+        if (currentGraph == null) {
+            showAlert("错误", "请先创建图");
+            throw new IllegalStateException();
         }
     }
 

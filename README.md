@@ -85,6 +85,34 @@ src/
 
 ## 快速开始
 
+### DSL 脚本用法
+
+应用已内置“DSL 工作台”（Graph 标签页左侧）。
+
+常用指令：
+
+```
+# 结构
+add vertex 5 label "E"        # 添加顶点并设置标签
+add edge 0 -> 5 weight 2       # 添加有向边
+remove edge 1 -> 2             # 删除边
+set label 3 "Goal"            # 修改顶点标签
+
+# 算法
+run dfs start 0                # 深度优先遍历
+run bfs start 0                # 广度优先遍历
+run dijkstra start 0 target 3  # 最短路径动画
+run mst kruskal                # 最小生成树
+```
+
+使用步骤：
+
+1. 在 DSL 工作台 TextArea 输入脚本（多行指令）。
+2. 点击“执行脚本”按钮；结构指令即时更新图，算法指令按顺序播放动画。
+3. 点击“清空”可快速清除脚本。
+
+> 说明：当前版本暂不支持删除顶点、运行时切换有向/无向，批量语句将后续迭代。
+
 ### 环境要求
 
 - Java 11 或更高版本
