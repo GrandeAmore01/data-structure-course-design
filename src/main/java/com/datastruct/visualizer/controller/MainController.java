@@ -73,6 +73,7 @@ public class MainController implements Initializable {
     // DSL 处理: 从文本解析图并加载到可视化
     @FXML private TextArea dslInput; // DSL 输入区
     @FXML private Button loadDslButton;
+    @FXML private Button clearDslButton;
     
     // 可视化面板
     private GraphVisualizationPane graphVisualizationPane;
@@ -1112,6 +1113,11 @@ public class MainController implements Initializable {
         } catch (IllegalArgumentException ex) {
             showAlert("DSL 错误", ex.getMessage());
         }
+    }
+
+    @FXML
+    private void clearDsl() {
+        if (dslInput != null) dslInput.clear();
     }
     
     // 辅助方法

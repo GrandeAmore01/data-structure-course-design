@@ -29,8 +29,23 @@
          <tabs>
             <Tab fx:id="graphTab" text="图数据结构">
                <content>
-                  <SplitPane dividerPositions="0.8" orientation="HORIZONTAL">
+                  <SplitPane dividerPositions="0.25,0.80" orientation="HORIZONTAL">
                      <items>
+                        <!-- DSL Pane on the left -->
+                        <VBox fx:id="dslPane" spacing="8.0" prefWidth="280.0">
+                           <children>
+                              <Label text="DSL 工作台" styleClass="section-title" />
+                              <TextArea fx:id="dslInput" promptText="在此输入脚本…" wrapText="true" prefHeight="260.0" />
+                              <HBox spacing="6.0" alignment="CENTER_LEFT">
+                                 <children>
+                                    <Button fx:id="runDslButton" text="执行脚本" onAction="#handleLoadDsl" />
+                                    <Button fx:id="clearDslButton" text="清空" onAction="#clearDsl" />
+                                 </children>
+                              </HBox>
+                           </children>
+                           <padding><Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/></padding>
+                        </VBox>
+                        <!-- Existing graph container -->
                         <VBox fx:id="graphContainer" style="-fx-background-color: white;">
                            <padding>
                               <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
@@ -141,18 +156,6 @@
                               <!-- 信息显示区域 -->
                               <Label text="图信息:" />
                               <TextArea fx:id="graphInfoArea" editable="false" prefHeight="150.0" wrapText="true" />
-                              <!-- DSL 输入折叠面板 -->
-                              <TitledPane text="DSL 输入 (Graph)" expanded="false">
-                                 <content>
-                                    <VBox spacing="6.0">
-                                       <children>
-                                          <Label text="输入 DSL:" />
-                                          <TextArea fx:id="dslInput" prefHeight="120.0" wrapText="true" />
-                                          <Button fx:id="loadDslButton" text="从 DSL 创建图" onAction="#handleLoadDsl" />
-                                       </children>
-                                    </VBox>
-                                 </content>
-                              </TitledPane>
                            </children>
                            <padding>
                               <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
