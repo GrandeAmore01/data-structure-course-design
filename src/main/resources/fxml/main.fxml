@@ -222,6 +222,15 @@
                   </SplitPane>
                </content>
             </Tab>
+            <Tab fx:id="dijkstraTableTab" text="迭代表">
+               <content>
+                  <ScrollPane fitToWidth="true" fitToHeight="true">
+                     <content>
+                        <com.datastruct.visualizer.view.DijkstraTablePane fx:id="dijkstraTablePane" />
+                     </content>
+                  </ScrollPane>
+               </content>
+            </Tab>
          </tabs>
       </TabPane>
    </center>

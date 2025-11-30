@@ -186,16 +186,26 @@ public class MST {
         private final double[] distances;
         private final int[] predecessors;
         private final List<DijkstraStep> steps;
+        private final java.util.List<DijkstraSnapshot> snapshots; // NEW FIELD
 
         public DijkstraResultWithSteps(double[] distances, int[] predecessors, List<DijkstraStep> steps) {
             this.distances = distances.clone();
             this.predecessors = predecessors.clone();
             this.steps = new ArrayList<>(steps);
+            this.snapshots = java.util.Collections.emptyList();
+        }
+
+        public DijkstraResultWithSteps(double[] distances, int[] predecessors, List<DijkstraStep> steps, java.util.List<DijkstraSnapshot> snapshots) {
+            this.distances = distances.clone();
+            this.predecessors = predecessors.clone();
+            this.steps = new ArrayList<>(steps);
+            this.snapshots = new java.util.ArrayList<>(snapshots);
         }
 
         public double[] getDistances() { return distances.clone(); }
         public int[] getPredecessors() { return predecessors.clone(); }
         public List<DijkstraStep> getSteps() { return new ArrayList<>(steps); }
+        public java.util.List<DijkstraSnapshot> getSnapshots() { return new java.util.ArrayList<>(snapshots); }
     }
 
     /**
@@ -216,6 +226,10 @@ public class MST {
 
         dist[source] = 0.0;
 
+        // 初始快照 (iteration 0)
+        java.util.List<DijkstraSnapshot> snapshots = new java.util.ArrayList<>();
+        snapshots.add(new DijkstraSnapshot(0, java.util.Collections.emptySet(), dist, prev));
+
         // 自定义优先队列：存顶点，Comparator 基于当前 dist
         PriorityQueue<Integer> pq = new PriorityQueue<>(Comparator.comparingDouble(v -> dist[v]));
         pq.offer(source);
@@ -228,6 +242,11 @@ public class MST {
             // 记录弹出（确定最短距离）
             steps.add(new DijkstraStep(DijkstraStep.StepType.EXTRACT_MIN, u));
             steps.add(new DijkstraStep(DijkstraStep.StepType.FINALIZE_VERTEX, u));
+
+            // 记录当前快照
+            java.util.Set<Integer> sTmp = new java.util.HashSet<>();
+            sTmp.add(u);
+            snapshots.add(new DijkstraSnapshot(snapshots.size(), sTmp, dist, prev));
 
             for (int v : graph.getNeighbors(u)) {
                 double w = graph.getWeight(u, v);
@@ -273,7 +292,7 @@ public class MST {
 
         steps.add(new DijkstraStep(DijkstraStep.StepType.COMPLETE));
 
-        return new DijkstraResultWithSteps(dist, prev, steps);
+        return new DijkstraResultWithSteps(dist, prev, steps, snapshots);
     }
 
     /**

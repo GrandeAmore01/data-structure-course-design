@@ -31,6 +31,7 @@ public class MainController implements Initializable {
     @FXML private TabPane mainTabPane;
     @FXML private Tab graphTab;
     @FXML private Tab sortingTab;
+    @FXML private Tab dijkstraTableTab; // NEW
     
     // 图相关控件
     @FXML private VBox graphContainer;
@@ -79,6 +80,7 @@ public class MainController implements Initializable {
     // 可视化面板
     private GraphVisualizationPane graphVisualizationPane;
     private SortingVisualizationPane sortingVisualizationPane;
+    private com.datastruct.visualizer.view.DijkstraTablePane dijkstraTablePane; // NEW
     
     // 数据模型
     private Graph currentGraph;
@@ -137,10 +139,13 @@ public class MainController implements Initializable {
         // 创建可视化面板
         graphVisualizationPane = new GraphVisualizationPane();
         sortingVisualizationPane = new SortingVisualizationPane();
+        dijkstraTablePane = new com.datastruct.visualizer.view.DijkstraTablePane(); // NEW
         
         // 添加到容器
         graphContainer.getChildren().add(graphVisualizationPane);
         sortingContainer.getChildren().add(sortingVisualizationPane);
+        // 将 Dijkstra 表格添加到主容器
+        graphContainer.getChildren().add(dijkstraTablePane);
 
         // 注册图面板的顶点点击回调：用于点击交互添加/删除边
         graphVisualizationPane.setOnVertexClickedHandler(v -> {
@@ -446,6 +451,13 @@ public class MainController implements Initializable {
                         } else {
                             // Dijkstra（使用带步骤的实现以便可视化生成过程）
                             MST.DijkstraResultWithSteps res = MST.dijkstraWithSteps(currentGraph, startVertex, targetVertex);
+                            // 填充表格并切换至“迭代表”标签
+                            if (dijkstraTablePane != null) {
+                                dijkstraTablePane.setData(res.getSnapshots(), currentGraph.getNumVertices());
+                            }
+                            if (dijkstraTableTab != null) {
+                                mainTabPane.getSelectionModel().select(dijkstraTableTab);
+                            }
                             // 如果不可达，提示并返回
                             double distToTarget = res.getDistances()[targetVertex];
                             if (Double.isInfinite(distToTarget)) {
