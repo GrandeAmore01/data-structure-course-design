@@ -226,9 +226,8 @@ public class MST {
 
         dist[source] = 0.0;
 
-        // 初始快照 (iteration 0)
         java.util.List<DijkstraSnapshot> snapshots = new java.util.ArrayList<>();
-        snapshots.add(new DijkstraSnapshot(0, java.util.Collections.emptySet(), dist, prev));
+        java.util.Set<Integer> settled = new java.util.HashSet<>();
 
         // 自定义优先队列：存顶点，Comparator 基于当前 dist
         PriorityQueue<Integer> pq = new PriorityQueue<>(Comparator.comparingDouble(v -> dist[v]));
@@ -238,15 +237,15 @@ public class MST {
 
         while (!pq.isEmpty()) {
             int u = pq.poll();
+            if (settled.contains(u)) continue; // 跳过过期条目
 
             // 记录弹出（确定最短距离）
             steps.add(new DijkstraStep(DijkstraStep.StepType.EXTRACT_MIN, u));
             steps.add(new DijkstraStep(DijkstraStep.StepType.FINALIZE_VERTEX, u));
 
-            // 记录当前快照
-            java.util.Set<Integer> sTmp = new java.util.HashSet<>();
-            sTmp.add(u);
-            snapshots.add(new DijkstraSnapshot(snapshots.size(), sTmp, dist, prev));
+            // 本轮所有松弛完成后记录快照（包括 u）
+            settled.add(u);
+            snapshots.add(new DijkstraSnapshot(snapshots.size(), java.util.Collections.unmodifiableSet(new java.util.HashSet<>(settled)), dist, prev));
 
             for (int v : graph.getNeighbors(u)) {
                 double w = graph.getWeight(u, v);
