@@ -115,9 +115,23 @@ public class MainController implements Initializable {
             "sk-7568ddce2e49481886b93152e3f7e58c", "deepseek-chat");
     private final List<ChatMessage> chatContext = new ArrayList<>();
     private static final String SYSTEM_PROMPT = """
-你是图形算法可视化助手。把用户请求翻译成 JSON:{dsl,explain,undo}
-DSL 示例:\nADD_VERTEX A\nADD_VERTEX B\nADD_EDGE A B 1\nRUN_DIJKSTRA A
-只返回 JSON，不要解释。
+你是图形算法可视化助手。将用户请求翻译成块状 DSL，并返回 JSON:{dsl, explain}。
+
+DSL 语法支持以下指令（请勿输出任何其他指令或属性！）:
+  ADD_VERTEX <id>
+  ADD_EDGE <src> <dst> <weight>
+  RUN_DFS <start>
+  RUN_BFS <start>
+  RUN_DIJKSTRA <start>
+  RUN_MST
+
+完整 DSL 必须包裹在:
+graph {\n  type adjacency_list\n  directed true\n  vertices <N>\n  ...指令...\n}
+
+示例 JSON 返回格式:
+{"dsl": "graph {\\n  type adjacency_list\\n  directed true\\n  vertices 2\\n  ADD_VERTEX A\\n  ADD_VERTEX B\\n  ADD_EDGE A B 1\\n  RUN_DFS A\\n}", "explain": "创建 2 顶点并执行 DFS"}
+
+***不要包含 set label / set directed / remove vertex / add vertex (带 label) 等当前未支持的指令。***
 """;
     private final ObjectMapper jsonMapper = new ObjectMapper();
     
@@ -299,9 +313,13 @@ DSL 示例:\nADD_VERTEX A\nADD_VERTEX B\nADD_EDGE A B 1\nRUN_DIJKSTRA A
         try {
             Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(dsl);
             this.currentGraph = g;
-            if (graphVisualizationPane != null) {
-                graphVisualizationPane.setGraph(g);
+            if (graphVisualizationPane == null) {
+                graphVisualizationPane = new GraphVisualizationPane();
+                if (graphContainer != null) {
+                    graphContainer.getChildren().setAll(graphVisualizationPane);
+                }
             }
+            graphVisualizationPane.setGraph(g);
             updateGraphInfo();
             // 重置点击交互状态
             lastSelectedVertex = -1;

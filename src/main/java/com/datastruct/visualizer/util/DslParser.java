@@ -14,6 +14,7 @@ public class DslParser {
     private static final Pattern PROPERTY_PATTERN = Pattern.compile("(type|directed|vertices)\\s+(\\S+)", Pattern.CASE_INSENSITIVE);
     private static final Pattern VERTEX_LABEL_PATTERN = Pattern.compile("vertex\\s+(\\d+)\\s+label\\s+\"([^\"]*)\"", Pattern.CASE_INSENSITIVE);
     private static final Pattern EDGE_PATTERN = Pattern.compile("edge\\s+(\\d+)\\s*(->|--)\\s*(\\d+)(?:\\s+weight\\s+([0-9]*\\.?[0-9]+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ADD_EDGE_PATTERN = Pattern.compile("ADD_EDGE\\s+(\\d+)\\s+(\\d+)\\s+([0-9]*\\.?[0-9]+)", Pattern.CASE_INSENSITIVE);
 
     public static Graph parseGraph(String dslText) throws IllegalArgumentException {
         if (dslText == null) throw new IllegalArgumentException("DSL 为空");
@@ -45,7 +46,22 @@ public class DslParser {
             Matcher mProp = PROPERTY_PATTERN.matcher(line);
             Matcher mV = VERTEX_LABEL_PATTERN.matcher(line);
             Matcher mE = EDGE_PATTERN.matcher(line);
-            if (mProp.matches()) {
+            Matcher mAddE = ADD_EDGE_PATTERN.matcher(line);
+            if (line.toUpperCase().startsWith("ADD_VERTEX")) {
+                // ignore, vertex count handled later
+                String[] tok = line.split("\\s+");
+                if (tok.length >= 3) {
+                    int idx = Integer.parseInt(tok[2]);
+                    maxVertexIdx = Math.max(maxVertexIdx, idx);
+                }
+                continue;
+            } else if (mAddE.matches()) {
+                int src = Integer.parseInt(mAddE.group(1));
+                int dst = Integer.parseInt(mAddE.group(2));
+                double w = Double.parseDouble(mAddE.group(3));
+                edges.add(new EdgeDef(src,dst,w));
+                maxVertexIdx = Math.max(maxVertexIdx, Math.max(src,dst));
+            } else if (mProp.matches()) {
                 String key = mProp.group(1).toLowerCase();
                 String val = mProp.group(2);
                 switch (key) {
