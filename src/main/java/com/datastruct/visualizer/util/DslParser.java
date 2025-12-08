@@ -81,6 +81,9 @@ public class DslParser {
                 double w = wStr == null ? 1.0 : Double.parseDouble(wStr);
                 edges.add(new EdgeDef(src, dst, w));
                 maxVertexIdx = Math.max(maxVertexIdx, Math.max(src, dst));
+            } else if (line.toUpperCase().startsWith("RUN_")) {
+                // 算法执行指令由控制器处理，这里忽略
+                continue;
             } else {
                 throw new IllegalArgumentException("无法解析行: " + line);
             }

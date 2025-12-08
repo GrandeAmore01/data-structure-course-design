@@ -26,6 +26,7 @@ import com.datastruct.visualizer.llm.LlmGateway;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
+import java.util.regex.Pattern;
 
 /**
  * 主控制器类
@@ -134,6 +135,13 @@ graph {\n  type adjacency_list\n  directed true\n  vertices <N>\n  ...指令...\
 ***不要包含 set label / set directed / remove vertex / add vertex (带 label) 等当前未支持的指令。***
 """;
     private final ObjectMapper jsonMapper = new ObjectMapper();
+    
+    private static final Pattern CMD_ADD_EDGE = Pattern.compile("ADD_EDGE\\s+(\\d+)\\s*(?:->|--)\\s*(\\d+)(?:\\s+weight\\s+([0-9]*\\.?[0-9]+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CMD_REMOVE_EDGE = Pattern.compile("REMOVE_EDGE\\s+(\\d+)\\s*(?:->|--)\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CMD_RUN_DFS = Pattern.compile("RUN_DFS(?:\s+START)?\s+(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CMD_RUN_BFS = Pattern.compile("RUN_BFS(?:\s+START)?\s+(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CMD_RUN_DIJ = Pattern.compile("RUN_DIJKSTRA(?:\s+START)?\s+(\\d+)(?:\s+TARGET\s+(\\d+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern CMD_RUN_MST = Pattern.compile("RUN_MST", Pattern.CASE_INSENSITIVE);
     
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -311,22 +319,99 @@ graph {\n  type adjacency_list\n  directed true\n  vertices <N>\n  ...指令...\
 
     private void executeDslString(String dsl) {
         try {
-            Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(dsl);
-            this.currentGraph = g;
-            if (graphVisualizationPane == null) {
-                graphVisualizationPane = new GraphVisualizationPane();
-                if (graphContainer != null) {
-                    graphContainer.getChildren().setAll(graphVisualizationPane);
+            boolean graphBuilt = false;
+            try {
+                Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(dsl);
+                this.currentGraph = g;
+                if (graphVisualizationPane == null) {
+                    graphVisualizationPane = new GraphVisualizationPane();
+                    if (graphContainer != null) graphContainer.getChildren().setAll(graphVisualizationPane);
                 }
+                graphVisualizationPane.setGraph(g);
+                graphBuilt = true;
+            } catch (Exception ignore) {
+                // not a full graph block, may just be commands
             }
-            graphVisualizationPane.setGraph(g);
-            updateGraphInfo();
-            // 重置点击交互状态
-            lastSelectedVertex = -1;
-            
+            // 无论是否重建图，都尝试解析并执行命令
+            processDslCommands(dsl);
         } catch (Exception ex) {
             appendChat("⚠️ DSL 执行失败:" + ex.getMessage());
         }
+    }
+
+    private void processDslCommands(String dsl) {
+        if (currentGraph == null) return;
+        String[] lines = dsl.split("\\r?\\n");
+        for (String raw : lines) {
+            String line = raw.trim();
+            if (line.isEmpty()) continue;
+            java.util.regex.Matcher m;
+            m = CMD_ADD_EDGE.matcher(line);
+            if (m.matches()) {
+                int u = Integer.parseInt(m.group(1));
+                int v = Integer.parseInt(m.group(2));
+                double w = m.group(3) == null ? 1.0 : Double.parseDouble(m.group(3));
+                currentGraph.addEdge(u, v, w);
+                graphVisualizationPane.setGraph(currentGraph);
+                continue;
+            }
+            m = CMD_REMOVE_EDGE.matcher(line);
+            if (m.matches()) {
+                int u = Integer.parseInt(m.group(1));
+                int v = Integer.parseInt(m.group(2));
+                currentGraph.removeEdge(u, v);
+                graphVisualizationPane.setGraph(currentGraph);
+                continue;
+            }
+            m = CMD_RUN_DFS.matcher(line);
+            if (m.matches()) {
+                int start = Integer.parseInt(m.group(1));
+                runGraphAlgorithm("DFS", start);
+                continue;
+            }
+            m = CMD_RUN_BFS.matcher(line);
+            if (m.matches()) {
+                int start = Integer.parseInt(m.group(1));
+                runGraphAlgorithm("BFS", start);
+                continue;
+            }
+            m = CMD_RUN_DIJ.matcher(line);
+            if (m.matches()) {
+                int s = Integer.parseInt(m.group(1));
+                if (m.group(2) != null) {
+                    int t = Integer.parseInt(m.group(2));
+                    runGraphAlgorithm("Dijkstra", s, t);
+                } else {
+                    runGraphAlgorithm("Dijkstra", s);
+                }
+                continue;
+            }
+            m = CMD_RUN_MST.matcher(line);
+            if (m.find()) {
+                runGraphAlgorithm("MST", 0);
+            }
+        }
+    }
+
+    private void runGraphAlgorithm(String algoKey, int start) {
+        String uiName = switch (algoKey) {
+            case "DFS" -> "深度优先搜索";
+            case "BFS" -> "广度优先搜索";
+            case "MST" -> "最小生成树(Kruskal)";
+            case "Dijkstra" -> "最短路径生成";
+            default -> algoKey;
+        };
+        if (graphAlgorithmCombo != null) graphAlgorithmCombo.setValue(uiName);
+        if (startVertexField != null) startVertexField.setText(String.valueOf(start));
+        if (runAlgorithmButton != null) runAlgorithmButton.fire();
+    }
+
+    private void runGraphAlgorithm(String algoKey, int start, int target) {
+        String uiName = algoKey.equals("Dijkstra") ? "最短路径生成" : algoKey;
+        if (graphAlgorithmCombo != null) graphAlgorithmCombo.setValue(uiName);
+        if (startVertexField != null) startVertexField.setText(String.valueOf(start));
+        if (targetVertexField != null) targetVertexField.setText(String.valueOf(target));
+        if (runAlgorithmButton != null) runAlgorithmButton.fire();
     }
     
     // 图相关方法
