@@ -49,6 +49,15 @@ public abstract class Graph {
             vertexLabels.put(vertex, label);
         }
     }
+
+    /**
+     * 将所有顶点标签重置为当前索引字符串，确保显示与内部索引一致。
+     */
+    public void resetVertexLabelsToIndex() {
+        for (int i = 0; i < numVertices; i++) {
+            vertexLabels.put(i, String.valueOf(i));
+        }
+    }
     
     public String getVertexLabel(int vertex) {
         return vertexLabels.getOrDefault(vertex, String.valueOf(vertex));

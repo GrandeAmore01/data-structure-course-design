@@ -79,10 +79,11 @@ public class DslParser {
         } else {
             g = new AdjacencyList(n, directed);
         }
-        // labels
+        // labels（导入后统一以索引为准，避免显示与内部索引不一致）
         for (Map.Entry<Integer, String> e : vertexLabels.entrySet()) {
             g.setVertexLabel(e.getKey(), e.getValue());
         }
+        g.resetVertexLabelsToIndex();
         // edges
         for (EdgeDef e : edges) {
             g.addEdge(e.src, e.dst, e.weight);

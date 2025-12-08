@@ -1,9 +1,7 @@
 package com.datastruct.visualizer.model.graph;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 邻接矩阵存储的图
@@ -147,11 +145,8 @@ public class AdjacencyMatrix extends Graph {
         matrix = newMatrix;
         numVertices = newSize;
         
-        // 添加顶点标签
-        if (label == null || label.trim().isEmpty()) {
-            label = String.valueOf(numVertices - 1);
-        }
-        vertexLabels.put(numVertices - 1, label);
+        // 强制标签与索引一致
+        resetVertexLabelsToIndex();
     }
     
     @Override
@@ -186,18 +181,8 @@ public class AdjacencyMatrix extends Graph {
         matrix = newMatrix;
         numVertices = newSize;
         
-        // 重新映射顶点标签（索引大于被删除顶点的都要-1）
-        Map<Integer, String> newLabels = new HashMap<>();
-        for (Map.Entry<Integer, String> entry : vertexLabels.entrySet()) {
-            int oldIndex = entry.getKey();
-            if (oldIndex < vertex) {
-                newLabels.put(oldIndex, entry.getValue());
-            } else if (oldIndex > vertex) {
-                newLabels.put(oldIndex - 1, entry.getValue());
-            }
-            // oldIndex == vertex 的标签被删除（不添加到新map）
-        }
-        vertexLabels = newLabels;
+        // 强制标签与索引一致
+        resetVertexLabelsToIndex();
     }
 }
 

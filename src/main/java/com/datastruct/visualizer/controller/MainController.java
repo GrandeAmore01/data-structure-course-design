@@ -27,8 +27,8 @@ import java.util.*;
  */
 public class MainController implements Initializable {
     
-    // FXML 注入的控件
-    @FXML private TabPane mainTabPane;
+        // FXML 注入的控件
+        @FXML private TabPane mainTabPane;
     @FXML private Tab graphTab;
     @FXML private Tab sortingTab;
     @FXML private Tab dijkstraTableTab; // NEW
@@ -241,7 +241,10 @@ public class MainController implements Initializable {
             } else {
                 currentGraph = new AdjacencyList(numVertices, isDirected);
             }
-            
+
+            // 统一标签为索引
+            currentGraph.resetVertexLabelsToIndex();
+
             graphVisualizationPane.setGraph(currentGraph);
             updateGraphInfo();
             // 重置点击交互状态
@@ -277,6 +280,7 @@ public class MainController implements Initializable {
             
             // 使用索引作为标签
             currentGraph.addVertex(String.valueOf(newVertexIndex));
+            currentGraph.resetVertexLabelsToIndex();
             graphVisualizationPane.setGraph(currentGraph);
             updateGraphInfo("已添加顶点 " + newVertexIndex);
             
@@ -1123,6 +1127,7 @@ public class MainController implements Initializable {
             try {
                 Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(trimmed);
                 currentGraph = g;
+                currentGraph.resetVertexLabelsToIndex();
                 graphVisualizationPane.setGraph(g);
                 updateGraphInfo();
                 showAlert("成功", "已根据 DSL 创建/替换图");
@@ -1153,6 +1158,7 @@ public class MainController implements Initializable {
                         }
                         // 标签
                         if (cmd.args.length > 1) currentGraph.setVertexLabel(id, cmd.args[1]);
+                        currentGraph.resetVertexLabelsToIndex();
                         graphVisualizationPane.redraw();
                     }
                     case REMOVE_VERTEX -> {
@@ -1177,6 +1183,7 @@ public class MainController implements Initializable {
                         ensureGraph();
                         int id = Integer.parseInt(cmd.args[0]);
                         currentGraph.setVertexLabel(id, cmd.args[1]);
+                        currentGraph.resetVertexLabelsToIndex();
                         graphVisualizationPane.redraw();
                     }
                     case SET_DIRECTED -> {

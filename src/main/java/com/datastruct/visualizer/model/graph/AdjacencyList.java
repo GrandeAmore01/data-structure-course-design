@@ -165,11 +165,8 @@ public class AdjacencyList extends Graph {
         // 更新顶点数
         numVertices++;
         
-        // 添加顶点标签
-        if (label == null || label.trim().isEmpty()) {
-            label = String.valueOf(numVertices - 1);
-        }
-        vertexLabels.put(numVertices - 1, label);
+        // 强制标签与索引一致
+        resetVertexLabelsToIndex();
     }
     
     @Override
@@ -203,17 +200,8 @@ public class AdjacencyList extends Graph {
         numVertices--;
         
         // 5. 重新映射顶点标签
-        Map<Integer, String> newLabels = new HashMap<>();
-        for (Map.Entry<Integer, String> entry : vertexLabels.entrySet()) {
-            int oldIndex = entry.getKey();
-            if (oldIndex < vertex) {
-                newLabels.put(oldIndex, entry.getValue());
-            } else if (oldIndex > vertex) {
-                newLabels.put(oldIndex - 1, entry.getValue());
-            }
-            // oldIndex == vertex 的标签被删除（不添加到新map）
-        }
-        vertexLabels = newLabels;
+        // 强制标签与索引一致
+        resetVertexLabelsToIndex();
     }
     
     /**

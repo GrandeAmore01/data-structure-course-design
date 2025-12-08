@@ -101,6 +101,9 @@ public class DataSerializer {
                 graph.addEdge(source, destination, weight);
             }
         }
+
+        // 保证加载后的标签与索引一致
+        graph.resetVertexLabelsToIndex();
         
         return graph;
     }
