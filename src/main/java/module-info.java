@@ -4,6 +4,7 @@ module datastructurevisualizer {
     requires transitive javafx.graphics;
     requires com.fasterxml.jackson.databind;
     requires org.slf4j;
+    requires okhttp3;
     
     exports com.datastruct.visualizer;
     exports com.datastruct.visualizer.controller;
@@ -11,9 +12,11 @@ module datastructurevisualizer {
     exports com.datastruct.visualizer.model.sorting;
     exports com.datastruct.visualizer.view;
     exports com.datastruct.visualizer.util;
+    exports com.datastruct.visualizer.llm;
     
      // 关键修复：向 javafx.fxml 开放控制器包（允许反射访问私有成员）
     opens com.datastruct.visualizer.controller to javafx.fxml;
+    opens com.datastruct.visualizer.llm to com.fasterxml.jackson.databind;
 
 
 }

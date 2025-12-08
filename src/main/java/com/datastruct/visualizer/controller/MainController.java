@@ -20,6 +20,12 @@ import javafx.util.Duration;
 import java.io.File;
 import java.net.URL;
 import java.util.*;
+import com.datastruct.visualizer.llm.ChatMessage;
+import com.datastruct.visualizer.llm.DeepSeekGateway;
+import com.datastruct.visualizer.llm.LlmGateway;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javafx.application.Platform;
 
 /**
  * 主控制器类
@@ -100,10 +106,26 @@ public class MainController implements Initializable {
     // 点击交互：记录上一次被选中的顶点索引（用于点击两次建立/删除边）
     private int lastSelectedVertex = -1;
     
+    @FXML private TextArea chatHistory; // 聊天记录
+    @FXML private TextField chatInput;  // 用户输入
+    @FXML private Button sendBtn;       // 发送按钮
+
+    // LLM 集成
+    private final LlmGateway llmGateway = new DeepSeekGateway(
+            "sk-7568ddce2e49481886b93152e3f7e58c", "deepseek-chat");
+    private final List<ChatMessage> chatContext = new ArrayList<>();
+    private static final String SYSTEM_PROMPT = """
+你是图形算法可视化助手。把用户请求翻译成 JSON:{dsl,explain,undo}
+DSL 示例:\nADD_VERTEX A\nADD_VERTEX B\nADD_EDGE A B 1\nRUN_DIJKSTRA A
+只返回 JSON，不要解释。
+""";
+    private final ObjectMapper jsonMapper = new ObjectMapper();
+    
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         setupUI();
         setupEventHandlers();
+        setupLLM();
     }
 
     /**
@@ -221,6 +243,72 @@ public class MainController implements Initializable {
         loadMenuItem.setOnAction(e -> loadData());
         
         sortingAlgorithmCombo.setOnAction(e -> updateAlgorithmInfo());
+    }
+    
+    private void setupLLM() {
+        chatContext.add(ChatMessage.system(SYSTEM_PROMPT));
+        if (sendBtn != null) {
+            sendBtn.setOnAction(e -> onSend());
+        }
+    }
+
+    private void onSend() {
+        if (chatInput == null) return;
+        String userText = chatInput.getText().trim();
+        if (userText.isEmpty()) return;
+        appendChat("🧑 " + userText);
+        chatContext.add(ChatMessage.user(userText));
+        chatInput.clear();
+
+        // 调用 LLM 放后台线程
+        new Thread(() -> {
+            try {
+                String assistant = llmGateway.chat(chatContext);
+                Platform.runLater(() -> handleAssistant(assistant));
+            } catch (Exception ex) {
+                Platform.runLater(() -> appendChat("⚠️ 调用失败:" + ex.getMessage()));
+            }
+        }).start();
+    }
+
+    private void handleAssistant(String content) {
+        appendChat("🤖 " + content);
+        chatContext.add(ChatMessage.assistant(content));
+        try {
+            JsonNode node = jsonMapper.readTree(content);
+            if (node.path("undo").asBoolean(false)) {
+                // TODO: implement undo logic
+                return;
+            }
+            String dsl = node.path("dsl").asText(null);
+            if (dsl != null) {
+                executeDslString(dsl);
+            }
+        } catch (Exception ignored) {
+            // 不是 JSON 或解析失败，不执行 DSL
+        }
+    }
+
+    private void appendChat(String line) {
+        if (chatHistory != null) {
+            chatHistory.appendText(line + "\n");
+        }
+    }
+
+    private void executeDslString(String dsl) {
+        try {
+            Graph g = com.datastruct.visualizer.util.DslParser.parseGraph(dsl);
+            this.currentGraph = g;
+            if (graphVisualizationPane != null) {
+                graphVisualizationPane.setGraph(g);
+            }
+            updateGraphInfo();
+            // 重置点击交互状态
+            lastSelectedVertex = -1;
+            
+        } catch (Exception ex) {
+            appendChat("⚠️ DSL 执行失败:" + ex.getMessage());
+        }
     }
     
     // 图相关方法

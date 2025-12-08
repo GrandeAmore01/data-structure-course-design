@@ -31,19 +31,37 @@
                <content>
                   <SplitPane dividerPositions="0.25,0.80" orientation="HORIZONTAL">
                      <items>
-                        <!-- DSL Pane on the left -->
-                        <VBox fx:id="dslPane" spacing="8.0" prefWidth="280.0">
+                        <!-- Left panel: DSL + Chat -->
+                        <VBox spacing="8.0" prefWidth="280.0" fx:id="leftPanel">
                            <children>
-                              <Label text="DSL 工作台" styleClass="section-title" />
-                              <TextArea fx:id="dslInput" promptText="在此输入脚本…" wrapText="true" prefHeight="260.0" />
-                              <HBox spacing="6.0" alignment="CENTER_LEFT">
+                              <!-- DSL Pane -->
+                              <VBox fx:id="dslPane" spacing="8.0">
                                  <children>
-                                    <Button fx:id="runDslButton" text="执行脚本" onAction="#handleLoadDsl" />
-                                    <Button fx:id="clearDslButton" text="清空" onAction="#clearDsl" />
+                                    <Label text="DSL 工作台" styleClass="section-title" />
+                                    <TextArea fx:id="dslInput" promptText="在此输入脚本…" wrapText="true" prefHeight="200.0" />
+                                    <HBox spacing="6.0" alignment="CENTER_LEFT">
+                                       <children>
+                                          <Button fx:id="runDslButton" text="执行脚本" onAction="#handleLoadDsl" />
+                                          <Button fx:id="clearDslButton" text="清空" onAction="#clearDsl" />
+                                       </children>
+                                    </HBox>
                                  </children>
-                              </HBox>
+                              </VBox>
+                              <!-- Chat Pane -->
+                              <VBox spacing="6.0" prefHeight="300.0" fx:id="chatPane">
+                                 <children>
+                                    <Label text="LLM 助手" styleClass="section-title" />
+                                    <TextArea fx:id="chatHistory" editable="false" wrapText="true" prefHeight="240.0" />
+                                    <HBox spacing="6.0">
+                                       <children>
+                                          <TextField fx:id="chatInput" HBox.hgrow="ALWAYS" promptText="输入问题…" />
+                                          <Button fx:id="sendBtn" text="发送" />
+                                       </children>
+                                    </HBox>
+                                 </children>
+                              </VBox>
                            </children>
-                           <padding><Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/></padding>
+                           <padding><Insets top="10" left="10" right="10" bottom="10"/></padding>
                         </VBox>
                         <!-- Existing graph container -->
                         <VBox fx:id="graphContainer" style="-fx-background-color: white;">
