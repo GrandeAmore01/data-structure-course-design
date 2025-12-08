@@ -616,6 +616,8 @@ public class MainController implements Initializable {
 
         List<Edge> currentPathEdges = new ArrayList<>();
 
+        int snapIdx = 0; // 对应 snapshots 行索引计数（表头除外）
+
         for (int i = 0; i < steps.size(); i++) {
             final int idx = i;
             MST.DijkstraStep step = steps.get(i);
@@ -630,6 +632,17 @@ public class MainController implements Initializable {
                         updateGraphInfo(algorithmName + " 处理中: 定点 " + v + " 确定最短距离");
                     });
                     timeline.getKeyFrames().add(kf);
+
+                    // 同步表格高亮，snapIdx 对应当前 settled 数 +1 行（表头占 0）
+                    if (dijkstraTablePane != null) {
+                        final int rowToHighlight = snapIdx + 1; // 将在之后自增
+                        KeyFrame tf = new KeyFrame(Duration.millis(t), ev2 -> dijkstraTablePane.highlightRow(rowToHighlight));
+                        timeline.getKeyFrames().add(tf);
+                    }
+
+                    if (step.getType() == MST.DijkstraStep.StepType.FINALIZE_VERTEX) {
+                        snapIdx++; // 快照已记录新顶点，准备下一行索引
+                    }
                     break;
                 }
                 case CONSIDER_EDGE: {

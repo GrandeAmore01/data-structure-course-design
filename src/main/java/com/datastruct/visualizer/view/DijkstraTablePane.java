@@ -83,4 +83,43 @@ public class DijkstraTablePane extends VBox {
         GridPane.setHalignment(lbl, HPos.CENTER);
         grid.add(lbl, col, row);
     }
+
+    /* ==== 行高亮支持 ====*/
+    private int highlightedRow = -1;
+
+    /**
+     * 高亮指定数据行（row >= 1）。表头行为 0。
+     */
+    public void highlightRow(int row) {
+        if (row == highlightedRow) return;
+
+        // 取消旧行背景
+        if (highlightedRow >= 1) {
+            for (var node : grid.getChildren()) {
+                Integer r = GridPane.getRowIndex(node);
+                if (r != null && r == highlightedRow && node instanceof Label lbl) {
+                    lbl.setStyle("-fx-border-color: black transparent transparent black; -fx-padding: 2 6 2 6;");
+                }
+            }
+        }
+
+        // 设置新行背景
+        if (row >= 1) {
+            for (var node : grid.getChildren()) {
+                Integer r = GridPane.getRowIndex(node);
+                if (r != null && r == row && node instanceof Label lbl) {
+                    lbl.setStyle("-fx-background-color: #fff6bf; -fx-border-color: black transparent transparent black; -fx-padding: 2 6 2 6;");
+                }
+            }
+        }
+
+        highlightedRow = row;
+
+        // 滚动至可见
+        if (getParent() instanceof javafx.scene.control.ScrollPane sp) {
+            // 估算滚动比例
+            double totalRows = grid.getRowCount() == 0 ? highlightedRow + 1 : grid.getRowCount();
+            sp.setVvalue(Math.max(0, (row - 1) / totalRows));
+        }
+    }
 }
