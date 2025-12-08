@@ -132,8 +132,8 @@
                                  <children>
                                     <Label text="起始顶点:" />
                                     <TextField fx:id="startVertexField" prefWidth="50.0" />
-                                    <Label text="目标顶点:" />
-                                    <TextField fx:id="targetVertexField" prefWidth="50.0" />
+                                    <!-- 保留隐藏目标顶点字段以兼容控制器但不显示 -->
+                                    <TextField fx:id="targetVertexField" managed="false" visible="false" />
                                  </children>
                               </HBox>
                               <Button fx:id="runAlgorithmButton" text="运行算法" />

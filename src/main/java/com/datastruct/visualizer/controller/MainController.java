@@ -424,15 +424,16 @@ public class MainController implements Initializable {
                         // 读取目标顶点（新 UI 字段 targetVertexField）
                         String rawTarget = targetVertexField == null ? "" : targetVertexField.getText();
                         String targetText = rawTarget == null ? "" : rawTarget.trim();
+                        int targetVertex;
                         if (targetText.isEmpty()) {
-                            showAlert("错误", "请在目标顶点输入框中输入目标顶点索引（整数）");
-                            return;
-                        }
-
-                        int targetVertex = Integer.parseInt(targetText);
-                        if (targetVertex < 0 || targetVertex >= currentGraph.getNumVertices()) {
-                            showAlert("错误", "目标顶点索引超出范围");
-                            return;
+                            // 目标为空，表示计算单源最短路径到所有顶点
+                            targetVertex = -1;
+                        } else {
+                            targetVertex = Integer.parseInt(targetText);
+                            if (targetVertex < 0 || targetVertex >= currentGraph.getNumVertices()) {
+                                showAlert("错误", "目标顶点索引超出范围");
+                                return;
+                            }
                         }
 
                         // 检查是否存在负权边，若存在使用 Bellman-Ford，否则使用 Dijkstra
@@ -445,13 +446,18 @@ public class MainController implements Initializable {
                                 return;
                             }
 
-                            List<Integer> path = res.getPath(targetVertex);
-                            if (path.isEmpty()) {
-                                showAlert("信息", "从 " + startVertex + " 到 " + targetVertex + " 不可达");
-                                return;
-                            }
+                            if (targetVertex >= 0) {
+                                List<Integer> path = res.getPath(targetVertex);
+                                if (path.isEmpty()) {
+                                    showAlert("信息", "从 " + startVertex + " 到 " + targetVertex + " 不可达");
+                                    return;
+                                }
 
-                            animatePath(path, "Bellman-Ford", res.getDistances()[targetVertex]);
+                                animatePath(path, "Bellman-Ford", res.getDistances()[targetVertex]);
+                            } else {
+                                // 仅提示算法完成，不显示路径
+                                showAlert("信息", "Bellman-Ford 计算完成：已生成从 " + startVertex + " 到所有顶点的最短距离");
+                            }
                         } else {
                             // Dijkstra（使用带步骤的实现以便可视化生成过程）
                             MST.DijkstraResultWithSteps res = MST.dijkstraWithSteps(currentGraph, startVertex, targetVertex);
@@ -462,14 +468,17 @@ public class MainController implements Initializable {
                             if (dijkstraTableTab != null) {
                                 mainTabPane.getSelectionModel().select(dijkstraTableTab);
                             }
-                            // 如果不可达，提示并返回
-                            double distToTarget = res.getDistances()[targetVertex];
-                            if (Double.isInfinite(distToTarget)) {
-                                showAlert("信息", "从 " + startVertex + " 到 " + targetVertex + " 不可达");
-                                return;
+                            double[] distances = res.getDistances();
+                            if (targetVertex >= 0) {
+                                // 如果不可达，提示并返回
+                                double distToTarget = distances[targetVertex];
+                                if (Double.isInfinite(distToTarget)) {
+                                    showAlert("信息", "从 " + startVertex + " 到 " + targetVertex + " 不可达");
+                                    return;
+                                }
                             }
 
-                            // 播放生成过程动画（不会在结束时把边变红，保持橙色）
+                            // 播放生成过程动画（target 为 -1 时仅展示算法过程，不显示路径）
                             animateShortestPathGeneration(res, startVertex, targetVertex, "Dijkstra");
                         }
                     } catch (NumberFormatException e) {
@@ -716,17 +725,26 @@ public class MainController implements Initializable {
                     }
                 case COMPLETE: {
                     KeyFrame kf = new KeyFrame(Duration.millis(t), ev -> {
-                        updateGraphInfo(algorithmName + " 完成，稍后将最终路径标为绿色");
+                        if (target >= 0) {
+                            updateGraphInfo(algorithmName + " 完成，稍后将最终路径标为绿色");
+                        } else {
+                            updateGraphInfo(algorithmName + " 完成");
+                        }
                     });
                     timeline.getKeyFrames().add(kf);
 
                     // 在完成后一小段时间，将当前路径边标记为 accepted (绿色)
                     KeyFrame finalizeKF = new KeyFrame(Duration.millis(t + stepMillis), ev -> {
-                        // 使用 acceptEdge 将这些边变为绿色（并从 considered 中移除）
-                        for (Edge finalE : new ArrayList<>(currentPathEdges)) {
-                            graphVisualizationPane.acceptEdge(finalE);
+                        if (target >= 0) {
+                            // 使用 acceptEdge 将这些边变为绿色（并从 considered 中移除）
+                            for (Edge finalE : new ArrayList<>(currentPathEdges)) {
+                                graphVisualizationPane.acceptEdge(finalE);
+                            }
+                            updateGraphInfo(algorithmName + " 完成，最终最短路径已显示为绿色");
+                        } else {
+                            // 不需要标记单条路径，直接结束
+                            updateGraphInfo(algorithmName + " 完成");
                         }
-                        updateGraphInfo(algorithmName + " 完成，最终最短路径已显示为绿色");
                         // 完成后，标记动画已停止
                         isGraphAnimationRunning = false;
                         pauseButton.setText("暂停");
