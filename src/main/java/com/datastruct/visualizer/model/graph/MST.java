@@ -243,14 +243,10 @@ public class MST {
             steps.add(new DijkstraStep(DijkstraStep.StepType.EXTRACT_MIN, u));
             steps.add(new DijkstraStep(DijkstraStep.StepType.FINALIZE_VERTEX, u));
 
-            // 本轮所有松弛完成后记录快照（包括 u）
-            settled.add(u);
-            snapshots.add(new DijkstraSnapshot(snapshots.size(), java.util.Collections.unmodifiableSet(new java.util.HashSet<>(settled)), dist, prev));
-
+            // 先进行所有邻边松弛
             for (int v : graph.getNeighbors(u)) {
                 double w = graph.getWeight(u, v);
                 Edge e = new Edge(u, v, w);
-
                 // 记录考虑这条边
                 steps.add(new DijkstraStep(DijkstraStep.StepType.CONSIDER_EDGE, e));
 
@@ -287,6 +283,10 @@ public class MST {
                     }
                 }
             }
+
+            // 邻边松弛完成后，再把 u 加入已确定集合并记录快照
+            settled.add(u);
+            snapshots.add(new DijkstraSnapshot(snapshots.size(), java.util.Collections.unmodifiableSet(new java.util.HashSet<>(settled)), dist, prev));
         }
 
         steps.add(new DijkstraStep(DijkstraStep.StepType.COMPLETE));
